@@ -1,0 +1,161 @@
+@import "tailwindcss";
+
+/* Word Game palette — deep navy night, royal violet actions, gold highlights (from the Sara777 mockups). */
+@theme {
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --color-night-950: #070b22;
+  --color-night-900: #0b1030;
+  --color-night-800: #111838;
+  --color-night-700: #1a2152;
+  --color-night-600: #29316b;
+  --color-brand-50: #f1eeff;
+  --color-brand-100: #e4ddff;
+  --color-brand-300: #a996ff;
+  --color-brand-400: #8b72ff;
+  --color-brand-500: #6d4dff;
+  --color-brand-600: #5b3df5;
+  --color-brand-700: #4a2ed6;
+  --color-gold-300: #fcd34d;
+  --color-gold-400: #fbbf24;
+  --color-gold-500: #f59e0b;
+}
+
+:root {
+  --ink-soft: #aab3d6;
+  --ink-mute: #6f7aa6;
+  --line: rgba(255, 255, 255, 0.08);
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-poppins), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- player app ---------- */
+.stage {
+  min-height: 100dvh;
+  background:
+    radial-gradient(60% 50% at 20% 10%, rgba(109, 77, 255, 0.22), transparent 60%),
+    radial-gradient(50% 40% at 85% 90%, rgba(251, 191, 36, 0.08), transparent 60%),
+    #05081a;
+  display: flex;
+  justify-content: center;
+  color: #fff;
+}
+
+.app {
+  position: relative;
+  width: 100%;
+  max-width: 430px;
+  min-height: 100dvh;
+  background:
+    radial-gradient(120% 60% at 50% -10%, #2a2380 0%, transparent 60%),
+    linear-gradient(180deg, #0c1234 0%, #080c26 100%);
+  overflow-x: hidden;
+  box-shadow: 0 0 80px rgba(0, 0, 0, 0.6);
+}
+
+.card {
+  background: linear-gradient(180deg, rgba(31, 38, 92, 0.85), rgba(18, 24, 62, 0.85));
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+
+.wallet-card {
+  background:
+    radial-gradient(100% 120% at 100% 0%, rgba(255, 255, 255, 0.18), transparent 55%),
+    linear-gradient(135deg, #6d4dff 0%, #5b3df5 45%, #3b1fb0 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(91, 61, 245, 0.35);
+}
+
+.btn-brand {
+  background: linear-gradient(180deg, #7d61ff 0%, #5b3df5 100%);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(91, 61, 245, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.btn-brand:active { transform: scale(0.97); }
+.btn-brand:disabled { filter: grayscale(0.7) brightness(0.7); box-shadow: none; }
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.btn-ghost:active { transform: scale(0.97); }
+
+.field {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: #fff;
+  outline: none;
+  font-size: 15px;
+}
+.field:focus { border-color: #8b72ff; }
+.field::placeholder { color: #6f7aa6; }
+
+.ball {
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: #3b2a05;
+  background: radial-gradient(circle at 35% 30%, #fff, #ffd54a 45%, #b8860b);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+.ball.violet { background: radial-gradient(circle at 35% 30%, #fff, #a78bfa 45%, #5b3df5); color: #fff; }
+.ball.blue { background: radial-gradient(circle at 35% 30%, #fff, #60a5fa 45%, #1d4ed8); color: #fff; }
+
+.pill { border-radius: 999px; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.float { animation: float 4s ease-in-out infinite; }
+
+@keyframes load { from { width: 0%; } to { width: 100%; } }
+.loadbar { animation: load 1.8s ease-in-out forwards; }
+
+@keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
+.pop { animation: pop 0.35s ease-out both; }
+
+@keyframes slideup { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.slideup { animation: slideup 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.fadein { animation: fadein 0.25s ease-out both; }
+
+@keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+.gold-text {
+  background: linear-gradient(90deg, #fde68a, #f59e0b, #fde68a);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+
+/* ---------- admin (light) ---------- */
+.admin-input {
+  width: 100%;
+  border: 1px solid #e3e5f0;
+  border-radius: 10px;
+  padding: 9px 12px;
+  background: #fff;
+  color: #1b1f3b;
+  outline: none;
+  font-size: 14px;
+}
+.admin-input:focus { border-color: #5b3df5; box-shadow: 0 0 0 3px #ece8ff; }
+
+/* Hide the "Powered by Netlify" badge Netlify injects on hosted builds */
+#nl-badge-frame { display: none !important; }
