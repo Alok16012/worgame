@@ -42,20 +42,19 @@ const CLOSE_TYPES: GameType[] = ["single_ank", "single_pana", "double_pana", "tr
 /**
  * Which sessions accept bids right now. Main: open session until the open time (or open result),
  * close session until the close time (or close result); after the open session only close-session
- * Single Ank / Pana bids are possible. In demo mode a session stays open until its result is declared.
+ * Single Ank / Pana bids are possible. Timings always apply, also in demo mode.
  */
 export function marketState(s: State, g: Game, now = new Date()): MarketState {
   if (!g.active) return CLOSED;
   const r = resultOf(s, g.id, ymd(now));
-  const demo = s.settings.demoMode;
   const t = now.getHours() * 60 + now.getMinutes();
   if (g.cat === "main") {
-    const openOk = !r?.openPana && (demo || t < mins(g.open));
-    const closeOk = !r?.closePana && (demo || t < mins(g.close));
+    const openOk = !r?.openPana && t < mins(g.open);
+    const closeOk = !r?.closePana && t < mins(g.close);
     return { openOk, closeOk, anyOk: openOk || closeOk, types: openOk ? CAT_TYPES.main : closeOk ? CLOSE_TYPES : [] };
   }
   const done = g.cat === "starline" ? !!r?.openPana : !!r?.jodi;
-  const ok = !done && (demo || t < mins(g.close));
+  const ok = !done && t < mins(g.close);
   return ok ? { openOk: true, closeOk: true, anyOk: true, types: CAT_TYPES[g.cat] } : CLOSED;
 }
 

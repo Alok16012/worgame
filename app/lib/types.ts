@@ -133,7 +133,7 @@ export interface Settings {
   maxBid: number;
   welcomeBonus: number;
   upiId: string;
-  demoMode: boolean; // ignore market timings: a session stays open until its result is declared
+  demoMode: boolean; // ignore the withdraw time window (market timings always apply)
   maintenance: boolean;
   version: string;
   contact: { whatsapp: string; phone: string; email: string; telegram: string };

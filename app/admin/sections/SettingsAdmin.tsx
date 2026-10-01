@@ -53,7 +53,7 @@ export function MainSetting() {
         {num("maxBid", "Max Bid Amount")}
       </div>
       <div className="grid md:grid-cols-2 gap-3 mt-5">
-        <Switch on={f.demoMode} onChange={(v) => setF({ ...f, demoMode: v })} label="Demo mode" hint="Ignore market timings: a session stays open for bids until its result is declared." />
+        <Switch on={f.demoMode} onChange={(v) => setF({ ...f, demoMode: v })} label="Demo mode" hint="Ignore the withdraw time window. Market OPEN/CLOSE timings always apply." />
         <Switch on={f.maintenance} onChange={(v) => setF({ ...f, maintenance: v })} label="Maintenance mode" hint="Player app shows 'under maintenance'." />
       </div>
       <Btn className="mt-5" onClick={() => save("Main Setting", (v) => (!v.appName.trim() ? "App name is required" : v.minBid < 1 || v.minBid > v.maxBid ? "Check min/max bid" : v.minDeposit > v.maxDeposit ? "Check min/max deposit" : v.minWithdraw > v.maxWithdraw ? "Check min/max withdraw" : null))}>Update</Btn>

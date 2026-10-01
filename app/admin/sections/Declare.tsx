@@ -5,7 +5,7 @@ import { declareResult, deleteResult, findGame, findUser, previewWinners, result
 import { fmtDate, inr, ymd } from "../../lib/format";
 import { normalizePana, panaDigit } from "../../lib/matka";
 import { useStore } from "../../lib/store";
-import { CAT_LABEL, type Bid, type Cat, type Session } from "../../lib/types";
+import { CAT_LABEL, type Bid, type Cat, type Game, type Session } from "../../lib/types";
 import { bidTypeLabel, fmtStamp, GameSelect, safe, sessionLabel } from "../common";
 import { Btn, Card, Field, Table, useAdmin } from "../ui";
 
@@ -19,6 +19,12 @@ export function DeclareResult({ cat }: { cat: Cat }) {
   const [value, setValue] = useState("");
   const [winners, setWinners] = useState<(Bid & { win: number })[] | null>(null);
   const [histDate, setHistDate] = useState(ymd());
+
+  // Only games that still have a result to declare for this date: fully declared games are hidden.
+  const pending = (game: Game, d = date) => {
+    const x = resultOf(s, game.id, d);
+    return game.cat === "gali" ? !x?.jodi : game.cat === "starline" ? !x?.openPana : !x?.closePana;
+  };
 
   const g = loaded ? findGame(s, loaded.gameId) : undefined;
   const r = gameId ? resultOf(s, gameId, date) : undefined;
@@ -61,6 +67,7 @@ export function DeclareResult({ cat }: { cat: Cat }) {
     const res = attempt((d) => declareResult(d, loaded.gameId, loaded.date, loaded.session, v));
     if (!res.ok) return toast(res.error, "bad");
     toast(`Result declared · ${res.value.winners} winners · ${inr(res.value.payout)}`, "ok");
+    if (cat !== "main" || loaded.session === "close") setGameId("");
     setLoaded(null);
     setWinners(null);
     setValue("");
@@ -81,8 +88,8 @@ export function DeclareResult({ cat }: { cat: Cat }) {
     <>
       <Card title={cat === "main" ? "Result Declared" : `${CAT_LABEL[cat]} Result Declared`}>
         <div className="grid sm:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-end">
-          <Field label="Date"><input type="date" className="admin-input" value={date} max={ymd()} onChange={(e) => { setDate(e.target.value); setLoaded(null); }} /></Field>
-          <Field label="Game Name"><GameSelect cat={cat} all="-Select Game-" value={gameId} onChange={(v) => { setGameId(v); setLoaded(null); }} /></Field>
+          <Field label="Date"><input type="date" className="admin-input" value={date} max={ymd()} onChange={(e) => { const d = e.target.value; setDate(d); setLoaded(null); const sel = gameId ? findGame(s, gameId) : undefined; if (sel && !pending(sel, d)) setGameId(""); }} /></Field>
+          <Field label="Game Name"><GameSelect cat={cat} all="-Select Game-" show={(x) => pending(x) || x.id === loaded?.gameId} value={gameId} onChange={(v) => { setGameId(v); setLoaded(null); }} /></Field>
           {cat === "main" ? (
             <Field label="Session">
               <select className="admin-input" value={session} onChange={(e) => { setSession(e.target.value as Session); setLoaded(null); }}>

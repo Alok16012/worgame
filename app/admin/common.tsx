@@ -3,14 +3,14 @@
 import { GameError } from "../lib/engine";
 import { useStore } from "../lib/store";
 import { fmtDate, fmtTime } from "../lib/format";
-import { TYPE_LABEL, type Bid, type Cat } from "../lib/types";
+import { TYPE_LABEL, type Bid, type Cat, type Game } from "../lib/types";
 
-export function GameSelect({ cat, value, onChange, all }: { cat?: Cat; value: number | ""; onChange: (v: number | "") => void; all?: string }) {
+export function GameSelect({ cat, value, onChange, all, show }: { cat?: Cat; value: number | ""; onChange: (v: number | "") => void; all?: string; show?: (g: Game) => boolean }) {
   const { state: s } = useStore();
   return (
     <select className="admin-input" value={value} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : "")}>
       {all !== undefined && <option value="">{all}</option>}
-      {s.games.filter((g) => !cat || g.cat === cat).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+      {s.games.filter((g) => (!cat || g.cat === cat) && (!show || show(g))).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
     </select>
   );
 }
