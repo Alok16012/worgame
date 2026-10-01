@@ -1,6 +1,6 @@
 import { fmtDate, hhmm, inr, mins, sum, ymd } from "./format";
 import { isPana, panaDigit, panaType, resultText } from "./matka";
-import { CAT_TYPES, TYPE_LABEL, type Bid, type Cat, type Game, type GameType, type Result, type Session, type State, type Txn, type TxnType, type User } from "./types";
+import { CAT_TYPES, TYPE_LABEL, type Bid, type Cat, type Game, type GameType, type Result, type Session, type PayMethod, type State, type Txn, type TxnType, type User } from "./types";
 
 // All game rules as plain functions over State. The store runs them on a cloned draft, so a thrown
 // GameError leaves saved data untouched. In production each exported action becomes a server endpoint
@@ -253,25 +253,22 @@ export function deposit(s: State, userId: number, amount: number, app: string) {
   addTxn(s, userId, "deposit", "cr", amount, "Deposit Fund", { mode: app, utr: "UTR" + Math.floor(1e11 + Math.random() * 9e11), status: "approved" });
 }
 
-export function payoutTarget(u: User) {
-  if (u.bank.account) return `${u.bank.bank} •••• ${u.bank.account.slice(-4)} (${u.bank.ifsc})`;
-  if (u.phonepe) return `PhonePe ${u.phonepe}`;
-  if (u.gpay) return `Google Pay ${u.gpay}`;
-  if (u.paytm) return `Paytm ${u.paytm}`;
-  return "";
-}
+const METHOD_FIELD = { PhonePe: "phonepe", "Google Pay": "gpay", Paytm: "paytm", "UPI ID": "upi" } as const;
 
-export function requestWithdraw(s: State, userId: number, amount: number) {
+/** Withdraw to a UPI method (PhonePe / Google Pay / Paytm number, or a UPI ID). The number is saved on the profile. */
+export function requestWithdraw(s: State, userId: number, amount: number, method: PayMethod, account: string) {
   const u = findUser(s, userId) ?? fail("User not found");
   const w = s.settings.withdraw;
   if (!withdrawOpen(s)) fail(`Withdraw time is ${w.from} to ${w.to}`);
+  const acc = account.trim();
+  if (method === "UPI ID" ? !/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(acc) : !/^[6-9]\d{9}$/.test(acc)) fail(method === "UPI ID" ? "Enter a valid UPI ID" : `Enter a valid ${method} number`);
   const { minWithdraw: lo, maxWithdraw: hi } = s.settings;
-  if (!Number.isInteger(amount) || amount < lo || amount > hi) fail(`Withdraw range is ${inr(lo)} - ${inr(hi)}`);
-  if (amount > u.balance) fail(`Insufficient wallet balance. Your balance is: ${u.balance}`);
-  const to = payoutTarget(u);
-  if (!to) fail("Please add bank details first");
+  if (!Number.isInteger(amount) || amount < lo) fail(`Minimum Amount is ${lo}`);
+  if (amount > hi) fail(`Maximum Amount is ${hi}`);
+  if (amount > u.balance) fail("You don't have enough fund!");
+  u[METHOD_FIELD[method]] = acc;
   u.balance -= amount; // held until the admin approves or rejects
-  addTxn(s, userId, "withdraw", "dr", amount, "Withdraw request", { status: "pending", payTo: to });
+  addTxn(s, userId, "withdraw", "dr", amount, "Withdraw request", { status: "pending", mode: method, payTo: `${method} ${acc}` });
 }
 
 export function decideWithdraw(s: State, txnId: number, status: "approved" | "rejected") {
@@ -306,7 +303,7 @@ export function registerUser(s: State, name: string, mobile: string, password: s
   const now = `${ymd()} ${hhmm()}`;
   const u: User = {
     id: nid(s), name: name.trim(), mobile, password, email: "", balance: 0, status: "active", betting: true, joined: now, lastLogin: now, loggedIn: true,
-    bank: { holder: "", bank: "", account: "", ifsc: "", address: "" }, paytm: "", phonepe: "", gpay: "",
+    bank: { holder: "", bank: "", account: "", ifsc: "", address: "" }, paytm: "", phonepe: "", gpay: "", upi: "",
   };
   s.users.push(u);
   if (s.settings.welcomeBonus > 0) {

@@ -67,8 +67,8 @@ function useHashRoute(): [string, (r: string) => void] {
 export function Logo({ name }: { name: string }) {
   return (
     <div className="bg-white rounded px-2.5 py-1.5 flex items-center gap-1.5 select-none">
-      <div className="w-7 h-7 rounded-full bg-[#f5b301] grid place-items-center font-black text-[#0e1a3a] text-sm">W</div>
-      <div className="font-bold text-[#0e1a3a] leading-none text-[15px]">{name}</div>
+      <div className="w-7 h-7 rounded-full bg-[#0e1a3a] grid place-items-center text-[#f5c542] text-[13px]" style={{ fontFamily: "var(--font-yatra)" }}>श्री</div>
+      <div className="font-bold text-[#0e1a3a] leading-none text-[15px]" style={{ fontFamily: "var(--font-cinzel)" }}>{name}</div>
     </div>
   );
 }
@@ -182,7 +182,7 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
   return (
     <div className="min-h-dvh grid place-items-center bg-[#f4f6f9] px-4">
       <div className="w-full max-w-sm bg-white rounded-xl shadow-lg p-7">
-        <div className="flex justify-center"><div className="bg-[#0e1a3a] rounded-lg p-3"><Logo name="Word Game" /></div></div>
+        <div className="flex justify-center"><div className="bg-[#0e1a3a] rounded-lg p-3"><Logo name="Shri Kalyan" /></div></div>
         <div className="text-xl font-semibold mt-6 text-slate-800 text-center">Admin Login</div>
         <form className="mt-5 space-y-3" onSubmit={(e) => { e.preventDefault(); onLogin(); }}>
           <input defaultValue="admin" className="admin-input" placeholder="Username" />

@@ -1,4 +1,4 @@
-// Data model for Word Game — a Matka-style market game (modelled on the Sara777 panel).
+// Data model for the Matka market app (modelled on the Sara777 panel, branded Shri Kalyan).
 
 /** main = Matka markets (open + close session), starline = hourly single-result slots, gali = Gali/Desawar jodi markets */
 export type Cat = "main" | "starline" | "gali";
@@ -42,6 +42,7 @@ export interface User {
   paytm: string;
   phonepe: string;
   gpay: string;
+  upi: string;
 }
 
 /** A market. Main: `open` = open-result time, `close` = close-result time. Starline/Gali: only `close` (result time) is used. */
@@ -101,6 +102,9 @@ export interface Txn {
   utr?: string;
   payTo?: string;
 }
+
+export type PayMethod = "PhonePe" | "Google Pay" | "Paytm" | "UPI ID";
+export const PAY_METHODS: PayMethod[] = ["PhonePe", "Google Pay", "Paytm", "UPI ID"];
 
 export interface Notice { id: number; title: string; msg: string; target: string; userId?: number | null; date: string; time: string }
 export interface Push { id: number; title: string; msg: string; target: string; sent: number; date: string; time: string }

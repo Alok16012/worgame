@@ -143,7 +143,7 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
         <div className="grid md:grid-cols-3 gap-x-6">
           <div>{info("Bank Name", u.bank.bank)}{info("A/c Holder Name", u.bank.holder)}{info("PhonePe No", u.phonepe)}</div>
           <div>{info("Branch Address", u.bank.address)}{info("A/c Number", u.bank.account)}{info("Google Pay No", u.gpay)}</div>
-          <div>{info("IFSC Code", u.bank.ifsc)}{info("Paytm No", u.paytm)}</div>
+          <div>{info("IFSC Code", u.bank.ifsc)}{info("Paytm No", u.paytm)}{info("UPI ID", u.upi)}</div>
         </div>
       </Card>
 
@@ -184,11 +184,11 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
         <Modal wide title="Edit User" onClose={() => setEdit(null)} footer={<><Btn variant="ghost" onClick={() => setEdit(null)}>Close</Btn><Btn onClick={() => {
           if (!edit.name.trim() || !/^\d{10}$/.test(edit.mobile)) return toast("Name and a 10-digit mobile are required", "bad");
           if (s.users.some((x) => x.mobile === edit.mobile && x.id !== id)) return toast("Mobile already used by another user", "bad");
-          set({ name: edit.name.trim(), mobile: edit.mobile, email: edit.email, password: edit.password, bank: edit.bank, paytm: edit.paytm, phonepe: edit.phonepe, gpay: edit.gpay }, "Edit User");
+          set({ name: edit.name.trim(), mobile: edit.mobile, email: edit.email, password: edit.password, bank: edit.bank, paytm: edit.paytm, phonepe: edit.phonepe, gpay: edit.gpay, upi: edit.upi }, "Edit User");
           setEdit(null); toast("User updated", "ok");
         }}>Update</Btn></>}>
           <div className="grid md:grid-cols-3 gap-3">
-            {([["Full Name", "name"], ["Mobile", "mobile"], ["Email", "email"], ["Password", "password"], ["Paytm No", "paytm"], ["PhonePe No", "phonepe"], ["Google Pay No", "gpay"]] as const).map(([l, k]) => (
+            {([["Full Name", "name"], ["Mobile", "mobile"], ["Email", "email"], ["Password", "password"], ["Paytm No", "paytm"], ["PhonePe No", "phonepe"], ["Google Pay No", "gpay"], ["UPI ID", "upi"]] as const).map(([l, k]) => (
               <Field key={k} label={l}><input className="admin-input" value={edit[k]} onChange={(e) => setEdit({ ...edit, [k]: e.target.value })} /></Field>
             ))}
             {([["A/c Holder Name", "holder"], ["Bank Name", "bank"], ["A/c Number", "account"], ["IFSC Code", "ifsc"], ["Branch Address", "address"]] as const).map(([l, k]) => (

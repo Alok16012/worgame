@@ -18,7 +18,7 @@ function BidCard({ b }: { b: Bid }) {
   const g = findGame(state, b.gameId);
   return (
     <div className="ybox overflow-hidden">
-      <div className="bg-[#f6b52e] text-white text-sm font-semibold px-3 py-1.5 flex justify-between"><span>{g?.name}</span><span>{fmtDate(b.date)} {fmtTime(b.time)}</span></div>
+      <div className="bg-[#13306f] text-white text-sm font-semibold px-3 py-1.5 flex justify-between"><span>{g?.name}</span><span>{fmtDate(b.date)} {fmtTime(b.time)}</span></div>
       <div className="grid grid-cols-4 text-center text-sm px-2 py-2.5">
         <div><div className="text-[11px] text-slate-500">Game Type</div><div className="font-medium">{typeName(b)}</div></div>
         <div><div className="text-[11px] text-slate-500">Session</div><div className="font-medium">{b.session ? (b.session === "open" ? "Open" : "Close") : "—"}</div></div>
@@ -41,10 +41,10 @@ export function BidHistory({ nav }: { nav: Nav }) {
   return (
     <>
       <Header title="Bid History" onBack={nav.back} />
-      <div className="px-3">
+      <div className="px-3 pt-3">
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3">
           {(["all", "pending", "won", "lost"] as const).map((x) => (
-            <button key={x} onClick={() => setF(x)} className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold ${f === x ? "bg-[#f6b52e] text-white" : "bg-white text-slate-600"}`}>{x === "all" ? "All" : STATUS[x][0]}</button>
+            <button key={x} onClick={() => setF(x)} className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold ${f === x ? "bg-[#13306f] text-white" : "bg-white text-slate-600"}`}>{x === "all" ? "All" : STATUS[x][0]}</button>
           ))}
         </div>
         <div className="space-y-3">{list.length ? list.map((b) => <BidCard key={b.id} b={b} />) : <div className="text-center text-slate-500 mt-16">No bids found</div>}</div>
@@ -60,7 +60,7 @@ export function WinHistory({ nav }: { nav: Nav }) {
   return (
     <>
       <Header title="Win History" onBack={nav.back} />
-      <div className="px-3 space-y-3">{list.length ? list.map((b) => <BidCard key={b.id} b={b} />) : <div className="text-center text-slate-500 mt-16">No wins yet</div>}</div>
+      <div className="px-3 pt-3 space-y-3">{list.length ? list.map((b) => <BidCard key={b.id} b={b} />) : <div className="text-center text-slate-500 mt-16">No wins yet</div>}</div>
     </>
   );
 }
@@ -73,9 +73,9 @@ export function Statement({ nav }: { nav: Nav }) {
   return (
     <>
       <Header title="Wallet Statement" onBack={nav.back} />
-      <div className="px-3">
+      <div className="px-3 pt-3">
         <div className="grid grid-cols-3 bg-white rounded-lg p-1 mb-3">
-          {(["all", "cr", "dr"] as const).map((x) => <button key={x} onClick={() => setF(x)} className={`py-2 rounded-md text-sm font-semibold ${f === x ? "bg-[#f6b52e] text-white" : "text-slate-600"}`}>{x === "all" ? "All" : x === "cr" ? "Credit" : "Debit"}</button>)}
+          {(["all", "cr", "dr"] as const).map((x) => <button key={x} onClick={() => setF(x)} className={`py-2 rounded-md text-sm font-semibold ${f === x ? "bg-[#13306f] text-white" : "text-slate-600"}`}>{x === "all" ? "All" : x === "cr" ? "Credit" : "Debit"}</button>)}
         </div>
         <div className="ybox divide-y divide-slate-100">
           {list.map((x) => (
@@ -96,10 +96,10 @@ export function GameRatesScreen({ nav }: { nav: Nav }) {
   return (
     <>
       <Header title="Game Rates" onBack={nav.back} />
-      <div className="px-3 space-y-4">
+      <div className="px-3 pt-3 space-y-4">
         {CATS.map((c) => (
           <div key={c} className="ybox overflow-hidden">
-            <div className="bg-[#f6b52e] text-white font-semibold px-4 py-2">{c === "main" ? "Main Market" : CAT_LABEL[c]}</div>
+            <div className="bg-[#13306f] text-white font-semibold px-4 py-2">{c === "main" ? "Main Market" : CAT_LABEL[c]}</div>
             {CAT_TYPES[c].map((t) => {
               const r = state.settings.rates[c][t];
               return <div key={t} className="flex justify-between px-4 py-2.5 border-b border-slate-100 last:border-0 text-sm"><span>{TYPE_LABEL[t]}</span><b>{r ? `${r.bet} KA ${r.win}` : "—"}</b></div>;
@@ -116,7 +116,7 @@ export function HowToPlay({ nav }: { nav: Nav }) {
   return (
     <>
       <Header title="How To Play" onBack={nav.back} />
-      <div className="px-3 space-y-3">
+      <div className="px-3 pt-3 space-y-3">
         <div className="ybox p-4 text-sm leading-relaxed whitespace-pre-wrap text-slate-700">{state.settings.howToPlay}</div>
         <div className="ybox p-4 text-sm text-slate-700">
           <div className="font-bold mb-1">Result example: 123-65-456</div>
@@ -135,7 +135,7 @@ export function Notices({ nav }: { nav: Nav }) {
   return (
     <>
       <Header title="Notifications" onBack={nav.back} />
-      <div className="px-3 space-y-3">
+      <div className="px-3 pt-3 space-y-3">
         {list.map((n) => <div key={n.id} className="ybox p-4"><div className="font-semibold text-slate-800">{n.title}</div><div className="text-sm text-slate-600 mt-0.5">{n.msg}</div><div className="text-[11px] text-slate-400 mt-1">{fmtDate(n.date)} {fmtTime(n.time)}</div></div>)}
         {!list.length && <div className="text-center text-slate-500 mt-16">No notifications</div>}
       </div>
@@ -152,8 +152,8 @@ export function Profile({ nav }: { nav: Nav }) {
   return (
     <>
       <Header title="My Profile" onBack={nav.back} />
-      <div className="px-4 space-y-4">
-        <div className="ybox p-4 text-center"><div className="w-16 h-16 mx-auto rounded-full bg-[#f6b52e] text-white text-3xl font-bold grid place-items-center">{user.name[0]}</div><div className="font-bold text-lg mt-2">{user.name}</div><div className="text-slate-500">{user.mobile}</div></div>
+      <div className="px-4 pt-4 space-y-4">
+        <div className="ybox p-4 text-center"><div className="w-16 h-16 mx-auto rounded-full bg-[#13306f] text-white text-3xl font-bold grid place-items-center">{user.name[0]}</div><div className="font-bold text-lg mt-2">{user.name}</div><div className="text-slate-500">{user.mobile}</div></div>
         <IconField icon={<User size={18} />} placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
         <IconField icon={<Mail size={18} />} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
         <button className="ybtn w-full py-3 rounded-xl" onClick={() => { if (!name.trim()) return toast("Enter your name", "bad"); update((d) => updateUser(d, user.id, { name: name.trim(), email: email.trim() })); toast("Profile Updated Successfully!"); }}>Update Profile</button>
@@ -184,7 +184,7 @@ export function Contact({ nav }: { nav: Nav }) {
   return (
     <>
       <Header title="Contact Us" onBack={nav.back} />
-      <div className="px-3"><div className="ybox divide-y divide-slate-100">
+      <div className="px-3 pt-3"><div className="ybox divide-y divide-slate-100">
         {rows.map(([i, l, v, href]) => <a key={l} href={href} target="_blank" rel="noreferrer" className="flex items-center gap-3 px-4 py-4">{i}<span className="flex-1 font-medium">{l}</span><span className="text-sm text-slate-500">{v}</span></a>)}
       </div></div>
     </>

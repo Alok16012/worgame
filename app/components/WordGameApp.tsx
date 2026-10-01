@@ -5,6 +5,7 @@ import { Banknote, Bell, BookOpen, Gamepad2, History, Home as HomeIcon, Landmark
 import { findUser } from "../lib/engine";
 import { StoreProvider, useStore } from "../lib/store";
 import { SessionCtx, Toast, useSession } from "./ui";
+import { Logo } from "./Logo";
 import type { Nav, Route } from "./nav";
 import { Auth, Splash } from "./screens/Auth";
 import { Chart, Home, MarketList } from "./screens/Home";
@@ -40,14 +41,14 @@ function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
       <div className="absolute inset-0 bg-black/50 fadein" onClick={onClose} />
       <div className="relative w-full max-w-[430px] h-full pointer-events-none">
         <aside className="slidein pointer-events-auto absolute left-0 top-0 h-full w-[78%] bg-white overflow-y-auto no-scrollbar">
-          <div className="bg-[#f6b52e] px-5 pt-10 pb-5 text-white">
-            <div className="w-14 h-14 rounded-full bg-white text-[#f6b52e] grid place-items-center text-2xl font-bold">{u?.name[0]}</div>
-            <div className="font-bold text-lg mt-2">{u?.name}</div>
-            <div className="text-sm opacity-90">{u?.mobile}</div>
+          <div className="px-5 pt-8 pb-5 text-white" style={{ background: "radial-gradient(100% 80% at 50% 0%, #23489f, #0b1d4f)" }}>
+            <div className="flex justify-center mb-4"><Logo size={26} /></div>
+            <div className="font-bold text-lg">{u?.name}</div>
+            <div className="text-sm opacity-80">{u?.mobile} · ₹{u?.balance.toLocaleString("en-IN")}</div>
           </div>
           <div className="py-2">
             {items.map(([icon, label, fn]) => (
-              <button key={label} onClick={fn} className="w-full flex items-center gap-4 px-5 py-3 text-[15px] text-slate-700 active:bg-slate-100"><span className="text-[#f6b52e]">{icon}</span>{label}</button>
+              <button key={label} onClick={fn} className="w-full flex items-center gap-4 px-5 py-3 text-[15px] text-slate-700 active:bg-slate-100"><span className="text-[#13306f]">{icon}</span>{label}</button>
             ))}
             <button onClick={() => { onClose(); nav.logout(); }} className="w-full flex items-center gap-4 px-5 py-3 text-[15px] text-rose-600"><LogOut size={19} /> Logout</button>
           </div>
@@ -104,7 +105,7 @@ function Shell() {
   }, [uid, user, signIn, showToast]);
 
   if (state.settings.maintenance) {
-    return <div className="min-h-dvh grid place-items-center text-center px-8"><div><Wrench size={48} className="mx-auto text-[#f6b52e]" /><div className="text-xl font-bold mt-4">Under Maintenance</div><p className="text-sm text-slate-500 mt-1">We&apos;ll be back shortly.</p></div></div>;
+    return <div className="min-h-dvh grid place-items-center text-center px-8 page-blue"><div><Wrench size={48} className="mx-auto text-[#f5c542]" /><div className="text-xl font-bold mt-4">Under Maintenance</div><p className="text-sm text-slate-500 mt-1">We&apos;ll be back shortly.</p></div></div>;
   }
   if (uid === undefined) return null;
   if (splash) return <Splash onDone={() => setSplash(false)} />;
@@ -133,7 +134,7 @@ function Shell() {
 
   return (
     <SessionCtx.Provider value={{ uid, toast: showToast }}>
-      <div key={stack.length + route.name} className="fadein pb-10">{screen}</div>
+      <div key={stack.length + route.name} className={`fadein pb-10 ${route.name === "home" || route.name === "list" ? "page-blue" : "page-light"}`}>{screen}</div>
       {drawer && <Drawer nav={nav} onClose={() => setDrawer(false)} />}
       <Toast msg={toast} />
     </SessionCtx.Provider>
