@@ -1,11 +1,9 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import { ChevronLeft, Gamepad2, Home, ReceiptText, User, Wallet as WalletIcon } from "lucide-react";
+import { CheckCircle2, ChevronLeft, CircleAlert, Menu } from "lucide-react";
 import { findUser } from "../lib/engine";
-import { inr } from "../lib/format";
 import { useStore } from "../lib/store";
-import type { MarketStatus } from "../lib/types";
 import type { Session } from "./nav";
 
 export const SessionCtx = createContext<Session | null>(null);
@@ -17,96 +15,74 @@ export function useSession() {
   return { ...s, user: findUser(state, s.uid)! };
 }
 
-export function Header({ title, sub, onBack, right }: { title: string; sub?: string; onBack?: () => void; right?: React.ReactNode }) {
+export const rupee = (n: number) => `₹ ${n.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+
+/** White top bar: back arrow (or ☰), title, wallet balance on the right. */
+export function Header({ title, onBack, onMenu, right }: { title: string; onBack?: () => void; onMenu?: () => void; right?: React.ReactNode }) {
+  const { user } = useSession();
   return (
-    <div className="sticky top-0 z-20 flex items-center gap-3 px-4 pt-5 pb-3 bg-[#0b1030]/85 backdrop-blur-md">
-      {onBack && (
-        <button onClick={onBack} className="w-9 h-9 -ml-1 grid place-items-center rounded-full bg-white/5 hover:bg-white/10" aria-label="Back">
-          <ChevronLeft size={22} />
-        </button>
-      )}
-      <div className="flex-1 min-w-0">
-        <div className="text-lg font-semibold leading-tight truncate">{title}</div>
-        {sub && <div className="text-[11px] text-[var(--ink-soft)]">{sub}</div>}
-      </div>
-      {right}
+    <div className="sticky top-0 z-20 flex items-center gap-3 px-4 h-14 bg-[#efefef]">
+      {onBack && <button onClick={onBack} className="text-[#f6b52e] -ml-1" aria-label="Back"><ChevronLeft size={28} strokeWidth={2.5} /></button>}
+      {onMenu && <button onClick={onMenu} className="text-slate-700 -ml-1" aria-label="Menu"><Menu size={26} /></button>}
+      <div className="flex-1 min-w-0 text-[20px] font-bold text-slate-800 truncate uppercase tracking-tight">{title}</div>
+      {right ?? <div className="font-semibold text-slate-800">{rupee(user.balance)}</div>}
     </div>
   );
 }
 
-export type Tab = "home" | "games" | "wallet" | "bets" | "profile";
-
-export function BottomNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
-  const items: { id: Tab; label: string; Icon: typeof Home }[] = [
-    { id: "home", label: "Home", Icon: Home },
-    { id: "games", label: "Games", Icon: Gamepad2 },
-    { id: "wallet", label: "Wallet", Icon: WalletIcon },
-    { id: "bets", label: "My Bets", Icon: ReceiptText },
-    { id: "profile", label: "Profile", Icon: User },
-  ];
+export function Toast({ msg }: { msg: { text: string; tone: "ok" | "bad" } | null }) {
+  if (!msg) return null;
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 bg-[#0a0f2c]/95 backdrop-blur-md border-t border-white/5 pb-[env(safe-area-inset-bottom)]">
-      <div className="grid grid-cols-5">
-        {items.map(({ id, label, Icon }) => {
-          const on = tab === id;
-          return (
-            <button key={id} onClick={() => onTab(id)} className={`flex flex-col items-center gap-1 py-2.5 text-[11px] ${on ? "text-brand-300 font-semibold" : "text-[var(--ink-mute)]"}`}>
-              <Icon size={21} strokeWidth={on ? 2.4 : 1.8} />
-              {label}
-            </button>
-          );
-        })}
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] pop w-[calc(100%-32px)] max-w-[398px]">
+      <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-white text-sm font-medium shadow-xl ${msg.tone === "ok" ? "bg-[#22c55e]" : "bg-[#dc2f45]"}`}>
+        {msg.tone === "ok" ? <CheckCircle2 size={20} /> : <CircleAlert size={20} />}{msg.text}
       </div>
-    </nav>
+    </div>
   );
 }
 
-export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title?: string; children: React.ReactNode }) {
+export function Sheet({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex justify-center">
-      <div className="absolute inset-0 bg-black/60 fadein" onClick={onClose} />
-      <div className="absolute bottom-0 w-full max-w-[430px] slideup rounded-t-3xl bg-[#111838] border-t border-white/10 p-5 pb-8 max-h-[85dvh] overflow-y-auto">
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
-        {title && <div className="text-lg font-semibold mb-4">{title}</div>}
+      <div className="absolute inset-0 bg-black/50 fadein" onClick={onClose} />
+      <div className="absolute bottom-0 w-full max-w-[430px] slideup rounded-t-3xl bg-white p-5 pb-8 max-h-[85dvh] overflow-y-auto">{children}</div>
+    </div>
+  );
+}
+
+export function Popup({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center px-8">
+      <div className="absolute inset-0 bg-black/50 fadein" onClick={onClose} />
+      <div className="relative w-full max-w-[340px] bg-[#f4f4f4] rounded-2xl p-5 pop">
+        <div className="text-lg font-bold text-slate-800 mb-4">{title}</div>
         {children}
       </div>
     </div>
   );
 }
 
-export function Toast({ msg }: { msg: string | null }) {
-  if (!msg) return null;
+/** Yellow round icon in front of a rounded input, like the app's forms. */
+export function IconField({ icon, ...p }: React.InputHTMLAttributes<HTMLInputElement> & { icon: React.ReactNode }) {
   return (
-    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[60] pop w-max max-w-[92vw]">
-      <div className="px-4 py-2.5 rounded-2xl bg-white text-slate-900 text-sm font-semibold shadow-2xl text-center">{msg}</div>
+    <div className="relative">
+      <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-[#f6b52e] grid place-items-center text-white">{icon}</div>
+      <input {...p} className="yfield !pl-14" />
     </div>
   );
 }
 
-export function Money({ n, className = "" }: { n: number; className?: string }) {
-  return <span className={className}>{inr(n)}</span>;
-}
-
-export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+export function UserCard() {
+  const { user } = useSession();
   return (
-    <div className="rounded-full grid place-items-center shrink-0 font-bold ring-2 ring-white/70 text-white" style={{ width: size, height: size, fontSize: size * 0.42, background: "linear-gradient(135deg,#8b72ff,#5b3df5)" }}>
-      {name.trim()[0]?.toUpperCase()}
+    <div className="ybox p-4">
+      <div className="bg-[#5d5d5d] rounded-lg text-white text-center py-3 font-bold leading-tight">{user.name.split(" ")[0]}<div>{user.mobile}</div></div>
+      <div className="text-center text-slate-700 mt-3">Available Balance ₹{user.balance.toLocaleString("en-IN")}</div>
+      <div className="flex justify-end -mt-1"><span className="flex"><span className="w-5 h-5 rounded-full bg-[#eb001b]" /><span className="w-5 h-5 rounded-full bg-[#f79e1b] -ml-2 opacity-90" /></span></div>
     </div>
   );
 }
 
-export function MarketPill({ s }: { s: MarketStatus }) {
-  const m: Record<MarketStatus, string> = {
-    open: "bg-emerald-500/15 text-emerald-300",
-    closed: "bg-rose-500/15 text-rose-300",
-    upcoming: "bg-amber-400/15 text-amber-300",
-    declared: "bg-brand-400/20 text-brand-300",
-    inactive: "bg-white/10 text-white/50",
-  };
-  return <span className={`pill px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${m[s]}`}>{s}</span>;
-}
-
-export function Ball({ n, size = 36, tone = "gold" }: { n: React.ReactNode; size?: number; tone?: "gold" | "violet" | "blue" }) {
-  return <div className={`ball ${tone === "gold" ? "" : tone}`} style={{ width: size, height: size, fontSize: size * 0.45 }}>{n}</div>;
-}
+export const whatsappLink = (n: string) => `https://wa.me/${n.replace(/\D/g, "")}`;

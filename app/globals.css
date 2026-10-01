@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Word Game palette — deep navy night, royal violet actions, gold highlights (from the Sara777 mockups). */
+/* Word Game palette. Admin: navy sidebar + Bootstrap blues. Player app: light grey + yellow (see .ybtn). */
 @theme {
   --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
   --color-night-950: #070b22;
@@ -35,127 +35,40 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ---------- player app ---------- */
-.stage {
-  min-height: 100dvh;
-  background:
-    radial-gradient(60% 50% at 20% 10%, rgba(109, 77, 255, 0.22), transparent 60%),
-    radial-gradient(50% 40% at 85% 90%, rgba(251, 191, 36, 0.08), transparent 60%),
-    #05081a;
-  display: flex;
-  justify-content: center;
-  color: #fff;
-}
-
-.app {
-  position: relative;
-  width: 100%;
-  max-width: 430px;
-  min-height: 100dvh;
-  background:
-    radial-gradient(120% 60% at 50% -10%, #2a2380 0%, transparent 60%),
-    linear-gradient(180deg, #0c1234 0%, #080c26 100%);
-  overflow-x: hidden;
-  box-shadow: 0 0 80px rgba(0, 0, 0, 0.6);
-}
-
-.card {
-  background: linear-gradient(180deg, rgba(31, 38, 92, 0.85), rgba(18, 24, 62, 0.85));
-  border: 1px solid var(--line);
-  border-radius: 18px;
-}
-
-.wallet-card {
-  background:
-    radial-gradient(100% 120% at 100% 0%, rgba(255, 255, 255, 0.18), transparent 55%),
-    linear-gradient(135deg, #6d4dff 0%, #5b3df5 45%, #3b1fb0 100%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
-  box-shadow: 0 12px 30px rgba(91, 61, 245, 0.35);
-}
-
-.btn-brand {
-  background: linear-gradient(180deg, #7d61ff 0%, #5b3df5 100%);
-  color: #fff;
-  font-weight: 600;
-  box-shadow: 0 6px 18px rgba(91, 61, 245, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-}
-.btn-brand:active { transform: scale(0.97); }
-.btn-brand:disabled { filter: grayscale(0.7) brightness(0.7); box-shadow: none; }
-
-.btn-ghost {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-.btn-ghost:active { transform: scale(0.97); }
-
-.field {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  padding: 12px 14px;
-  color: #fff;
-  outline: none;
-  font-size: 15px;
-}
-.field:focus { border-color: #8b72ff; }
-.field::placeholder { color: #6f7aa6; }
-
-.ball {
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-  color: #3b2a05;
-  background: radial-gradient(circle at 35% 30%, #fff, #ffd54a 45%, #b8860b);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
-}
-.ball.violet { background: radial-gradient(circle at 35% 30%, #fff, #a78bfa 45%, #5b3df5); color: #fff; }
-.ball.blue { background: radial-gradient(circle at 35% 30%, #fff, #60a5fa 45%, #1d4ed8); color: #fff; }
-
-.pill { border-radius: 999px; }
+/* ---------- player app (light, yellow — like the live app) ---------- */
+.stage { min-height: 100dvh; background: #d9d9d9; display: flex; justify-content: center; color: #222; }
+.app { position: relative; width: 100%; max-width: 430px; min-height: 100dvh; background: #efefef; overflow-x: hidden; box-shadow: 0 0 40px rgba(0,0,0,.18); }
+.ybtn { background: #f6b52e; color: #fff; font-weight: 600; letter-spacing: .3px; box-shadow: 0 3px 8px rgba(246,181,46,.35); }
+.ybtn:active { transform: scale(.98); }
+.ybtn:disabled { opacity: .55; }
+.yfield { width: 100%; background: #fff; border-radius: 999px; padding: 12px 18px; outline: none; font-size: 15px; box-shadow: 0 2px 6px rgba(0,0,0,.08); color: #222; }
+.yfield::placeholder { color: #8a8a8a; }
+.ybox { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+@keyframes marquee { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
+.marquee span { display: inline-block; white-space: nowrap; animation: marquee 14s linear infinite; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
-
-@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-.float { animation: float 4s ease-in-out infinite; }
-
-@keyframes load { from { width: 0%; } to { width: 100%; } }
-.loadbar { animation: load 1.8s ease-in-out forwards; }
-
 @keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
-.pop { animation: pop 0.35s ease-out both; }
-
+.pop { animation: pop 0.3s ease-out both; }
 @keyframes slideup { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .slideup { animation: slideup 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-
-@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes slidein { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+.slidein { animation: slidein 0.25s ease-out both; }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } } /* opacity only: a transform here would trap position:fixed children */
 .fadein { animation: fadein 0.25s ease-out both; }
-
-@keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
-.gold-text {
-  background: linear-gradient(90deg, #fde68a, #f59e0b, #fde68a);
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: shimmer 4s linear infinite;
-}
 
 /* ---------- admin (light) ---------- */
 .admin-input {
   width: 100%;
-  border: 1px solid #e3e5f0;
-  border-radius: 10px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
   padding: 9px 12px;
   background: #fff;
   color: #1b1f3b;
   outline: none;
   font-size: 14px;
 }
-.admin-input:focus { border-color: #5b3df5; box-shadow: 0 0 0 3px #ece8ff; }
+.admin-input:focus { border-color: #86b7fe; box-shadow: 0 0 0 3px rgba(13,110,253,.18); }
 
 /* Hide the "Powered by Netlify" badge Netlify injects on hosted builds */
 #nl-badge-frame { display: none !important; }

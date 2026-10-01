@@ -1,32 +1,57 @@
-// Core domain model for Word Game (see README → "How the game works").
+// Data model for Word Game — a Matka-style market game (modelled on the Sara777 panel).
 
+/** main = Matka markets (open + close session), starline = hourly single-result slots, gali = Gali/Desawar jodi markets */
 export type Cat = "main" | "starline" | "gali";
 export const CATS: Cat[] = ["main", "starline", "gali"];
-export const CAT_LABEL: Record<Cat, string> = { main: "Main Game", starline: "Starline", gali: "Galidesawar" };
-export const CAT_ICON: Record<Cat, string> = { main: "🎲", starline: "⭐", gali: "🌙" };
-export const ANKS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+export const CAT_LABEL: Record<Cat, string> = { main: "Main Market", starline: "Starline", gali: "Galidesawar" };
+
+export type GameType =
+  | "single_ank" | "jodi" | "single_pana" | "double_pana" | "triple_pana" | "half_sangam" | "full_sangam"
+  | "left_digit" | "right_digit";
+
+export const TYPE_LABEL: Record<GameType, string> = {
+  single_ank: "Single Ank", jodi: "Jodi", single_pana: "Single Pana", double_pana: "Double Pana", triple_pana: "Triple Pana",
+  half_sangam: "Half Sangam", full_sangam: "Full Sangam", left_digit: "Left Digit", right_digit: "Right Digit",
+};
+
+/** Game types playable in each category, in display order. */
+export const CAT_TYPES: Record<Cat, GameType[]> = {
+  main: ["single_ank", "jodi", "single_pana", "double_pana", "triple_pana", "half_sangam", "full_sangam"],
+  starline: ["single_ank", "single_pana", "double_pana", "triple_pana"],
+  gali: ["left_digit", "right_digit", "jodi"],
+};
+
+/** Main-market session. Starline/Gali bids have no session. */
+export type Session = "open" | "close";
+
+export interface Bank { holder: string; bank: string; account: string; ifsc: string; address: string }
 
 export interface User {
   id: number;
   name: string;
   mobile: string;
+  password: string;
+  email: string;
   balance: number;
   status: "active" | "inactive";
-  joined: string; // yyyy-mm-dd
-  kyc: boolean;
-  upi: string;
+  betting: boolean; // admin can stop a user from placing bids
+  joined: string; // yyyy-mm-dd hh:mm
+  lastLogin: string | null;
+  loggedIn: boolean;
+  bank: Bank;
+  paytm: string;
+  phonepe: string;
+  gpay: string;
 }
 
-/** A market: bidding is allowed between open and close, then one result Ank is declared per day. */
+/** A market. Main: `open` = open-result time, `close` = close-result time. Starline/Gali: only `close` (result time) is used. */
 export interface Game {
   id: number;
   cat: Cat;
   name: string;
   open: string; // HH:MM
   close: string; // HH:MM
-  rate: number; // payout multiplier, e.g. 9.5 → ₹10 bid wins ₹95
   active: boolean;
-  numbers: number[]; // Anks users may bid on
 }
 
 export type BidStatus = "pending" | "won" | "lost" | "reverted";
@@ -34,25 +59,33 @@ export interface Bid {
   id: number;
   userId: number;
   gameId: number;
-  ank: number;
+  type: GameType;
+  session: Session | null;
+  /** Ank "6", jodi "65", pana "123", half sangam "123-6" (open) / "456-6" (close), full sangam "123-456" */
+  value: string;
   amount: number;
-  rate: number; // locked when the bid is placed
+  rate: number; // win per ₹1, locked at bid time
   date: string;
   time: string;
   status: BidStatus;
   win?: number;
+  /** Which declaration settled this bid, so deleting a result can undo exactly those bids. */
+  settledBy?: "open" | "close";
 }
 
+/** One row per market per date. Main uses openPana/closePana; Starline uses openPana; Gali uses jodi. */
 export interface Result {
   id: number;
   gameId: number;
   date: string;
-  ank: number;
-  at: string;
-  by: string;
+  openPana?: string;
+  openAt?: string;
+  closePana?: string;
+  closeAt?: string;
+  jodi?: string;
 }
 
-export type TxnType = "deposit" | "withdraw" | "bet" | "win" | "refund" | "manual";
+export type TxnType = "deposit" | "withdraw" | "bet" | "win" | "refund" | "manual" | "bonus";
 export type TxnStatus = "success" | "pending" | "approved" | "rejected";
 export interface Txn {
   id: number;
@@ -63,54 +96,41 @@ export interface Txn {
   date: string;
   time: string;
   status: TxnStatus;
-  mode?: string;
+  remark: string;
+  mode?: string; // UPI app / Bank
   utr?: string;
-  upi?: string;
-  note?: string;
+  payTo?: string;
 }
 
-export interface Notice {
-  id: number;
-  title: string;
-  msg: string;
-  target: string;
-  userId?: number | null;
-  date: string;
-  time: string;
-  auto?: boolean;
-}
+export interface Notice { id: number; title: string; msg: string; target: string; userId?: number | null; date: string; time: string }
+export interface Push { id: number; title: string; msg: string; target: string; sent: number; date: string; time: string }
+export interface Role { id: number; name: string; perms: string[] }
+export interface AdminUser { id: number; name: string; username: string; role: string; active: boolean }
+export interface Audit { id: number; at: string; by: string; action: string; detail: string }
+export interface Slider { id: number; title: string; sub: string; c1: string; c2: string }
 
-export interface Push {
-  id: number;
-  title: string;
-  msg: string;
-  target: string;
-  sent: number;
-  date: string;
-  time: string;
-}
+/** Payout written the way the panel shows it: bet `bet` → win `win`. */
+export interface Rate { bet: number; win: number }
 
 export const MODULES = [
   "Dashboard", "Declare Result", "Prediction", "Users", "Roles", "Wallet", "Withdraw",
   "Games", "Starline", "Galidesawar", "Reports", "Notices", "Settings",
 ] as const;
 
-export interface Role { id: number; name: string; perms: string[] }
-export interface AdminUser { id: number; name: string; username: string; role: string; active: boolean }
-export interface Audit { id: number; at: string; by: string; action: string; detail: string }
-export interface Slider { id: number; title: string; sub: string; c1: string; c2: string }
-
 export interface Settings {
   appName: string;
-  tagline: string;
+  marquee: string;
+  website: string;
   minDeposit: number;
+  maxDeposit: number;
   minWithdraw: number;
+  maxWithdraw: number;
   minBid: number;
   maxBid: number;
-  upiId: string;
-  demoMode: boolean; // keep every market open regardless of timings
-  maintenance: boolean;
   welcomeBonus: number;
+  upiId: string;
+  demoMode: boolean; // ignore market timings: a session stays open until its result is declared
+  maintenance: boolean;
   version: string;
   contact: { whatsapp: string; phone: string; email: string; telegram: string };
   howToPlay: string;
@@ -118,6 +138,7 @@ export interface Settings {
   sliders: Slider[];
   withdraw: { days: number[]; from: string; to: string };
   golden: { date: string; anks: number[] };
+  rates: Record<Cat, Partial<Record<GameType, Rate>>>;
 }
 
 export interface State {
@@ -135,5 +156,3 @@ export interface State {
   audit: Audit[];
   settings: Settings;
 }
-
-export type MarketStatus = "open" | "closed" | "upcoming" | "declared" | "inactive";

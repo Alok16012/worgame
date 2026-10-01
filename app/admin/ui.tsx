@@ -1,8 +1,8 @@
 "use client";
 
-import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { ANKS, type BidStatus, type MarketStatus } from "../lib/types";
+import type { BidStatus } from "../lib/types";
 
 /* ---------------- admin context: toast + confirm dialog ---------------- */
 
@@ -31,7 +31,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const toast = useCallback((msg: string, tone: ToastTone = "info") => {
     const id = Math.random();
     setToasts((t) => [...t, { id, msg, tone }]);
-    window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2800);
+    window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3000);
   }, []);
 
   const confirm = useCallback((o: ConfirmOpts) => {
@@ -51,8 +51,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       {dlg && (
         <Modal title={dlg.title} onClose={() => close(false)}
           footer={<>
-            <Btn variant="ghost" onClick={() => close(false)}>Cancel</Btn>
-            <Btn variant={dlg.tone ?? "brand"} disabled={!!dlg.requireText && typed.trim() !== dlg.requireText} onClick={() => close(true)}>{dlg.ok ?? "Confirm"}</Btn>
+            <Btn variant="ghost" onClick={() => close(false)}>Close</Btn>
+            <Btn variant={dlg.tone ?? "brand"} disabled={!!dlg.requireText && typed.trim() !== dlg.requireText} onClick={() => close(true)}>{dlg.ok ?? "Submit"}</Btn>
           </>}>
           <div className="text-sm text-slate-600 leading-relaxed">{dlg.body}</div>
           {dlg.requireText && (
@@ -62,9 +62,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           )}
         </Modal>
       )}
-      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[80] flex flex-col items-center gap-2">
+      <div className="fixed top-4 right-4 z-[80] flex flex-col items-end gap-2">
         {toasts.map((t) => (
-          <div key={t.id} className={`fadein px-4 py-2.5 rounded-xl text-sm font-semibold text-white shadow-xl ${t.tone === "ok" ? "bg-emerald-600" : t.tone === "bad" ? "bg-rose-600" : "bg-slate-900"}`}>{t.msg}</div>
+          <div key={t.id} className={`fadein px-4 py-2.5 rounded-lg text-sm font-semibold text-white shadow-xl ${t.tone === "ok" ? "bg-emerald-600" : t.tone === "bad" ? "bg-rose-600" : "bg-slate-900"}`}>{t.msg}</div>
         ))}
       </div>
     </Ctx.Provider>
@@ -73,27 +73,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
 /* ---------------- building blocks ---------------- */
 
-export function Title({ t, s, right }: { t: string; s?: string; right?: React.ReactNode }) {
+export function Card({ title, right, children, className = "" }: { title?: React.ReactNode; right?: React.ReactNode; children?: React.ReactNode; className?: string }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">{t}</h1>
-        {s && <p className="text-sm text-slate-500 mt-0.5">{s}</p>}
-      </div>
-      {right}
-    </div>
-  );
-}
-
-export function Card({ title, desc, right, children, className = "" }: { title?: React.ReactNode; desc?: React.ReactNode; right?: React.ReactNode; children?: React.ReactNode; className?: string }) {
-  return (
-    <section className={`bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_1px_2px_rgba(16,24,64,.04)] ${className}`}>
+    <section className={`bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(16,24,64,.08)] ${className}`}>
       {(title || right) && (
-        <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-          <div>
-            {title && <h2 className="font-semibold text-slate-900">{title}</h2>}
-            {desc && <p className="text-[13px] text-slate-500 mt-0.5">{desc}</p>}
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          {title && <h2 className="font-semibold text-slate-800 text-[17px]">{title}</h2>}
           {right}
         </div>
       )}
@@ -105,91 +90,113 @@ export function Card({ title, desc, right, children, className = "" }: { title?:
 type BtnVariant = "brand" | "ghost" | "green" | "red" | "dark" | "amber";
 export function Btn({ variant = "brand", size = "md", className = "", ...p }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: BtnVariant; size?: "sm" | "md" }) {
   const v = {
-    brand: "bg-brand-600 text-white hover:bg-brand-700",
-    ghost: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50",
-    green: "bg-emerald-600 text-white hover:bg-emerald-700",
-    red: "bg-rose-600 text-white hover:bg-rose-700",
-    dark: "bg-[#0e1433] text-white hover:bg-[#1a2152]",
-    amber: "bg-amber-500 text-white hover:bg-amber-600",
+    brand: "bg-[#0d6efd] text-white hover:bg-[#0b5ed7]",
+    ghost: "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50",
+    green: "bg-[#28a745] text-white hover:bg-[#218838]",
+    red: "bg-[#dc3545] text-white hover:bg-[#c82333]",
+    dark: "bg-[#0e1a3a] text-white hover:bg-[#1a2a55]",
+    amber: "bg-[#f5b301] text-white hover:bg-[#e0a300]",
   }[variant];
-  const s = size === "sm" ? "px-2.5 py-1 text-xs rounded-lg" : "px-4 py-2 text-sm rounded-xl";
-  return <button {...p} className={`${v} ${s} font-semibold whitespace-nowrap transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5 ${className}`} />;
+  const s = size === "sm" ? "px-2.5 py-1 text-xs rounded" : "px-4 py-2 text-sm rounded-md";
+  return <button {...p} className={`${v} ${s} font-medium whitespace-nowrap transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5 ${className}`} />;
 }
 
 export function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
   return (
     <label className={`flex flex-col gap-1.5 min-w-0 ${className}`}>
-      <span className="text-xs font-semibold text-slate-500">{label}</span>
+      <span className="text-[13px] text-slate-600">{label}</span>
       {children}
     </label>
   );
 }
 
-export type Tone = "green" | "red" | "amber" | "violet" | "gray" | "blue";
+export type Tone = "green" | "red" | "amber" | "blue" | "gray" | "orange";
 export function Badge({ tone, children }: { tone: Tone; children: React.ReactNode }) {
-  const c = {
-    green: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-    red: "bg-rose-50 text-rose-700 ring-rose-200",
-    amber: "bg-amber-50 text-amber-700 ring-amber-200",
-    violet: "bg-brand-50 text-brand-700 ring-brand-100",
-    gray: "bg-slate-100 text-slate-600 ring-slate-200",
-    blue: "bg-sky-50 text-sky-700 ring-sky-200",
-  }[tone];
-  return <span className={`pill inline-flex items-center px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset whitespace-nowrap ${c}`}>{children}</span>;
-}
-
-export function StatusBadge({ s }: { s: MarketStatus }) {
-  const m: Record<MarketStatus, [Tone, string]> = { open: ["green", "Open"], closed: ["red", "Closed"], upcoming: ["amber", "Upcoming"], declared: ["violet", "Declared"], inactive: ["gray", "Inactive"] };
-  return <Badge tone={m[s][0]}>{m[s][1]}</Badge>;
+  const c = { green: "bg-[#28a745]", red: "bg-[#dc3545]", amber: "bg-[#f5b301]", blue: "bg-[#0d6efd]", gray: "bg-slate-400", orange: "bg-[#fd7e14]" }[tone];
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold text-white whitespace-nowrap ${c}`}>{children}</span>;
 }
 
 export function BidBadge({ s }: { s: BidStatus }) {
-  const m: Record<BidStatus, [Tone, string]> = { pending: ["amber", "Pending"], won: ["green", "Won"], lost: ["red", "Lost"], reverted: ["gray", "Reverted"] };
+  const m: Record<BidStatus, [Tone, string]> = { pending: ["amber", "Pending"], won: ["green", "Win"], lost: ["red", "Loss"], reverted: ["gray", "Reverted"] };
   return <Badge tone={m[s][0]}>{m[s][1]}</Badge>;
 }
 
-export function Stat({ label, value, tone, sub }: { label: string; value: React.ReactNode; tone?: "green" | "red"; sub?: React.ReactNode }) {
+/** Yes/No pill toggle like the live panel. */
+export function YesNo({ on, onChange }: { on: boolean; onChange?: () => void }) {
+  return <button onClick={onChange} className={`px-3 py-1 rounded text-xs font-semibold text-white ${on ? "bg-[#28a745]" : "bg-[#dc3545]"}`}>{on ? "Yes" : "No"}</button>;
+}
+
+export function Stat({ label, value, tone }: { label: string; value: React.ReactNode; tone?: "green" | "red" }) {
   return (
-    <div className="bg-white border border-slate-200/80 rounded-2xl p-4">
+    <div className="bg-white rounded-xl p-4 shadow-[0_1px_3px_rgba(16,24,64,.08)]">
       <div className="text-xs text-slate-500">{label}</div>
       <div className={`text-xl font-bold mt-1 ${tone === "green" ? "text-emerald-600" : tone === "red" ? "text-rose-600" : "text-slate-900"}`}>{value}</div>
-      {sub && <div className="text-[11px] text-slate-400 mt-0.5">{sub}</div>}
     </div>
   );
 }
 
-export function Table({ head, rows, empty = "No data available in table", max = true }: { head: React.ReactNode[]; rows: React.ReactNode[][]; empty?: string; max?: boolean }) {
+export function Table({ head, rows, empty = "No data available in table" }: { head: React.ReactNode[]; rows: React.ReactNode[][]; empty?: string }) {
   return (
-    <div className={`overflow-auto border border-slate-200 rounded-xl ${max ? "max-h-[560px]" : ""}`}>
+    <div className="overflow-x-auto">
       <table className="w-full text-[13px] border-collapse">
         <thead>
-          <tr>
-            {head.map((h, i) => (
-              <th key={i} className="sticky top-0 z-[1] bg-slate-50 text-left text-[11px] uppercase tracking-wide text-slate-500 font-semibold px-3 py-2.5 border-b border-slate-200 whitespace-nowrap">{h}</th>
-            ))}
+          <tr className="bg-[#e9ecef]">
+            {head.map((h, i) => <th key={i} className="text-left text-[12px] uppercase tracking-wide text-slate-600 font-semibold px-3 py-2.5 whitespace-nowrap">{h}</th>)}
           </tr>
         </thead>
         <tbody>
           {rows.length ? rows.map((r, i) => (
-            <tr key={i} className="hover:bg-brand-50/40 border-b border-slate-100 last:border-0">
+            <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
               {r.map((c, j) => <td key={j} className="px-3 py-2.5 whitespace-nowrap text-slate-700">{c}</td>)}
             </tr>
-          )) : (
-            <tr><td colSpan={head.length} className="text-center text-slate-400 py-8">{empty}</td></tr>
-          )}
+          )) : <tr><td colSpan={head.length} className="text-center text-slate-500 py-6">{empty}</td></tr>}
         </tbody>
       </table>
     </div>
   );
 }
 
+/** DataTables-style table: "Show N entries", Search box, pagination. `text` is the searchable string per row. */
+export function DataTable({ head, rows, text, pageSize = 10 }: { head: React.ReactNode[]; rows: React.ReactNode[][]; text?: string[]; pageSize?: number }) {
+  const [q, setQ] = useState("");
+  const [n, setN] = useState(pageSize);
+  const [page, setPage] = useState(0);
+  const idx = useMemo(() => rows.map((_, i) => i).filter((i) => !q || (text?.[i] ?? "").toLowerCase().includes(q.toLowerCase())), [rows, text, q]);
+  const pages = Math.max(1, Math.ceil(idx.length / n));
+  const p = Math.min(page, pages - 1);
+  const shown = idx.slice(p * n, p * n + n);
+  const nums = Array.from({ length: pages }, (_, i) => i).filter((i) => i < 2 || i >= pages - 2 || Math.abs(i - p) <= 1);
+  return (
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3 text-[13px] text-slate-600">
+        <label className="flex items-center gap-2">Show
+          <select className="admin-input !w-auto !py-1" value={n} onChange={(e) => { setN(Number(e.target.value)); setPage(0); }}>{[10, 25, 50, 100].map((x) => <option key={x}>{x}</option>)}</select>
+          entries</label>
+        {text && <label className="flex items-center gap-2">Search: <input className="admin-input !w-52 !py-1" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} /></label>}
+      </div>
+      <Table head={head} rows={shown.map((i) => rows[i])} />
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-3 text-[13px] text-slate-600">
+        <div>Showing {idx.length ? p * n + 1 : 0} to {Math.min(idx.length, p * n + n)} of {idx.length} entries</div>
+        <div className="flex items-center gap-1">
+          <button disabled={p === 0} onClick={() => setPage(p - 1)} className="px-2.5 py-1 rounded disabled:text-slate-300">Previous</button>
+          {nums.map((i, k) => (
+            <span key={i} className="flex items-center gap-1">
+              {k > 0 && nums[k - 1] !== i - 1 && <span className="px-1">…</span>}
+              <button onClick={() => setPage(i)} className={`min-w-8 px-2 py-1 rounded border ${i === p ? "bg-[#0d6efd] text-white border-[#0d6efd]" : "border-slate-200"}`}>{i + 1}</button>
+            </span>
+          ))}
+          <button disabled={p >= pages - 1} onClick={() => setPage(p + 1)} className="px-2.5 py-1 rounded disabled:text-slate-300">Next</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Tabs<T extends string>({ value, onChange, items }: { value: T; onChange: (v: T) => void; items: { id: T; label: React.ReactNode }[] }) {
   return (
-    <div className="flex flex-wrap gap-1 border-b border-slate-200 mb-4">
+    <div className="flex flex-wrap border-b border-slate-200 mb-4">
       {items.map((it) => (
-        <button key={it.id} onClick={() => onChange(it.id)} className={`px-3.5 py-2.5 text-sm font-semibold -mb-px border-b-2 transition-colors ${value === it.id ? "text-brand-600 border-brand-600" : "text-slate-500 border-transparent hover:text-slate-700"}`}>
-          {it.label}
-        </button>
+        <button key={it.id} onClick={() => onChange(it.id)} className={`flex-1 min-w-24 px-4 py-2.5 text-sm -mb-px border-b-2 ${value === it.id ? "text-[#0d6efd] border-[#0d6efd] font-semibold" : "text-slate-500 border-transparent"}`}>{it.label}</button>
       ))}
     </div>
   );
@@ -199,31 +206,16 @@ export function Modal({ title, onClose, children, footer, wide }: { title: React
   return (
     <div className="fixed inset-0 z-[70] grid place-items-center p-4">
       <div className="absolute inset-0 bg-slate-950/50 fadein" onClick={onClose} />
-      <div className={`relative w-full ${wide ? "max-w-4xl" : "max-w-lg"} max-h-[88dvh] flex flex-col bg-white rounded-2xl shadow-2xl pop`}>
-        <div className="flex items-center px-5 py-4 border-b border-slate-100">
-          <div className="font-semibold text-slate-900">{title}</div>
+      <div className={`relative w-full ${wide ? "max-w-5xl" : "max-w-md"} max-h-[88dvh] flex flex-col bg-white rounded-lg shadow-2xl pop`}>
+        <div className="flex items-center px-5 py-3.5 border-b border-slate-200">
+          <div className="font-semibold text-slate-800">{title}</div>
           <button onClick={onClose} className="ml-auto text-slate-400 hover:text-slate-700" aria-label="Close"><X size={20} /></button>
         </div>
         <div className="p-5 overflow-auto">{children}</div>
-        {footer && <div className="flex justify-end gap-2 px-5 py-3 border-t border-slate-100">{footer}</div>}
+        {footer && <div className="flex justify-end gap-2 px-5 py-3 border-t border-slate-200">{footer}</div>}
       </div>
     </div>
   );
 }
 
-/** Ank buttons 0–9. `selected` may be a single value or a list. */
-export function AnkPicker({ selected, onPick, disabled = [] }: { selected: number | null | number[]; onPick: (a: number) => void; disabled?: number[] }) {
-  const on = (a: number) => (Array.isArray(selected) ? selected.includes(a) : selected === a);
-  return (
-    <div className="flex flex-wrap gap-2">
-      {ANKS.map((a) => (
-        <button key={a} disabled={disabled.includes(a)} onClick={() => onPick(a)}
-          className={`w-12 h-12 rounded-xl text-lg font-bold border transition-colors disabled:opacity-30 ${on(a) ? "bg-brand-600 border-brand-600 text-white shadow-lg shadow-brand-600/30" : "bg-white border-slate-200 text-slate-800 hover:border-brand-400"}`}>
-          {a}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-export const ANK_COLORS = ["#1f6fd1", "#16a34a", "#0ea5e9", "#ea580c", "#16a34a", "#0ea5e9", "#ea580c", "#1f6fd1", "#7c3aed", "#0e1433"];
+export const ANK_COLORS = ["#1f6fd1", "#2eb24b", "#3d97e0", "#f36b0a", "#2eb24b", "#3d97e0", "#f36b0a", "#1f6fd1", "#1f6fd1", "#141a33"];

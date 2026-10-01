@@ -1,25 +1,70 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Wrench } from "lucide-react";
+import { Banknote, Bell, BookOpen, Gamepad2, History, Home as HomeIcon, Landmark, LogOut, Percent, Phone, ReceiptText, Share2, Trophy, User as UserIcon, Wallet, Wrench } from "lucide-react";
 import { findUser } from "../lib/engine";
 import { StoreProvider, useStore } from "../lib/store";
-import { BottomNav, SessionCtx, Toast, type Tab } from "./ui";
+import { SessionCtx, Toast, useSession } from "./ui";
 import type { Nav, Route } from "./nav";
 import { Auth, Splash } from "./screens/Auth";
-import { Games, Home, PlaceBid, Results } from "./screens/Main";
-import { AddFunds, WalletScreen, Withdraw } from "./screens/WalletScreens";
-import { HowToPlay, MyBets, Notifications, Profile, Support } from "./screens/Account";
+import { Chart, Home, MarketList } from "./screens/Home";
+import { BetScreen, GameTypes } from "./screens/Play";
+import { BankDetails, Deposit, Withdraw, WithdrawHistory } from "./screens/Funds";
+import { BidHistory, Contact, GameRatesScreen, HowToPlay, Notices, Profile, Statement, WinHistory } from "./screens/Account";
 
-const TAB_OF: Partial<Record<Route["name"], Tab>> = { home: "home", games: "games", wallet: "wallet", bets: "bets", profile: "profile" };
 const SESSION_KEY = "wg_session";
 
-function Shell() {
+function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
   const { state } = useStore();
+  const { user: u } = useSession();
+  const go = (r: Route) => { onClose(); nav.push(r); };
+  const items: [React.ReactNode, string, () => void][] = [
+    [<HomeIcon key="i" size={19} />, "Home", () => { onClose(); nav.reset({ name: "home" }); }],
+    [<UserIcon key="i" size={19} />, "My Profile", () => go({ name: "profile" })],
+    [<Wallet key="i" size={19} />, "Deposit Fund", () => go({ name: "deposit" })],
+    [<Banknote key="i" size={19} />, "Withdraw Fund", () => go({ name: "withdraw" })],
+    [<Landmark key="i" size={19} />, "Add Bank Details", () => go({ name: "bank" })],
+    [<History key="i" size={19} />, "Bid History", () => go({ name: "bids" })],
+    [<Trophy key="i" size={19} />, "Win History", () => go({ name: "wins" })],
+    [<ReceiptText key="i" size={19} />, "Wallet Statement", () => go({ name: "statement" })],
+    [<Gamepad2 key="i" size={19} />, "Starline", () => go({ name: "list", cat: "starline" })],
+    [<Gamepad2 key="i" size={19} />, "Gali Desawar", () => go({ name: "list", cat: "gali" })],
+    [<Percent key="i" size={19} />, "Game Rates", () => go({ name: "rates" })],
+    [<BookOpen key="i" size={19} />, "How To Play", () => go({ name: "howto" })],
+    [<Bell key="i" size={19} />, "Notifications", () => go({ name: "notices" })],
+    [<Phone key="i" size={19} />, "Contact Us", () => go({ name: "contact" })],
+    [<Share2 key="i" size={19} />, "Share App", () => { onClose(); navigator.share?.({ title: state.settings.appName, url: location.origin }).catch(() => {}); }],
+  ];
+  return (
+    <div className="fixed inset-0 z-50 flex justify-center">
+      <div className="absolute inset-0 bg-black/50 fadein" onClick={onClose} />
+      <div className="relative w-full max-w-[430px] h-full pointer-events-none">
+        <aside className="slidein pointer-events-auto absolute left-0 top-0 h-full w-[78%] bg-white overflow-y-auto no-scrollbar">
+          <div className="bg-[#f6b52e] px-5 pt-10 pb-5 text-white">
+            <div className="w-14 h-14 rounded-full bg-white text-[#f6b52e] grid place-items-center text-2xl font-bold">{u?.name[0]}</div>
+            <div className="font-bold text-lg mt-2">{u?.name}</div>
+            <div className="text-sm opacity-90">{u?.mobile}</div>
+          </div>
+          <div className="py-2">
+            {items.map(([icon, label, fn]) => (
+              <button key={label} onClick={fn} className="w-full flex items-center gap-4 px-5 py-3 text-[15px] text-slate-700 active:bg-slate-100"><span className="text-[#f6b52e]">{icon}</span>{label}</button>
+            ))}
+            <button onClick={() => { onClose(); nav.logout(); }} className="w-full flex items-center gap-4 px-5 py-3 text-[15px] text-rose-600"><LogOut size={19} /> Logout</button>
+          </div>
+          <div className="text-center text-xs text-slate-400 pb-6">Version {state.settings.version}</div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function Shell() {
+  const { state, update } = useStore();
   const [uid, setUid] = useState<number | null | undefined>(undefined);
   const [splash, setSplash] = useState(true);
   const [stack, setStack] = useState<Route[]>([{ name: "home" }]);
-  const [toast, setToast] = useState<string | null>(null);
+  const [drawer, setDrawer] = useState(false);
+  const [toast, setToast] = useState<{ text: string; tone: "ok" | "bad" } | null>(null);
   const timer = useRef(0);
   const route = stack[stack.length - 1];
 
@@ -27,66 +72,69 @@ function Shell() {
     try { setUid(Number(localStorage.getItem(SESSION_KEY)) || null); } catch { setUid(null); }
   }, []);
 
-  const showToast = useCallback((msg: string) => {
-    setToast(msg);
+  const showToast = useCallback((text: string, tone: "ok" | "bad" = "ok") => {
+    setToast({ text, tone });
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setToast(null), 2600);
   }, []);
 
-  const signIn = (id: number | null) => {
+  const signIn = useCallback((id: number | null) => {
     try { if (id) localStorage.setItem(SESSION_KEY, String(id)); else localStorage.removeItem(SESSION_KEY); } catch {}
     setUid(id);
     setStack([{ name: "home" }]);
-  };
+  }, []);
 
   const nav = useMemo<Nav>(() => ({
     push: (r) => { setStack((s) => [...s, r]); window.scrollTo(0, 0); },
     back: () => { setStack((s) => (s.length > 1 ? s.slice(0, -1) : [{ name: "home" }])); window.scrollTo(0, 0); },
     reset: (r) => { setStack([r]); window.scrollTo(0, 0); },
-    logout: () => signIn(null),
-  }), []);
+    logout: () => {
+      if (uid) update((d) => { const u = d.users.find((x) => x.id === uid); if (u) u.loggedIn = false; });
+      signIn(null);
+    },
+  }), [uid, update, signIn]);
 
   const user = uid ? findUser(state, uid) : undefined;
-  // Admin blocked this user (possibly from another tab) → sign out.
+  // Admin blocked the user or pressed "Logout Now" (maybe from another tab) → sign out here too.
   useEffect(() => {
-    if (uid && (!user || user.status !== "active")) {
+    if (uid && (!user || user.status !== "active" || !user.loggedIn)) {
       signIn(null);
-      showToast("Your account is blocked. Contact support.");
+      showToast(user?.status !== "active" ? "Your account is blocked. Contact admin." : "You have been logged out", "bad");
     }
-  }, [uid, user, showToast]);
+  }, [uid, user, signIn, showToast]);
 
   if (state.settings.maintenance) {
-    return (
-      <div className="min-h-dvh grid place-items-center text-center px-8">
-        <div><Wrench size={48} className="mx-auto text-gold-400" /><div className="text-xl font-semibold mt-4">Under maintenance</div><p className="text-sm text-[var(--ink-soft)] mt-1">We&apos;ll be back shortly.</p></div>
-      </div>
-    );
+    return <div className="min-h-dvh grid place-items-center text-center px-8"><div><Wrench size={48} className="mx-auto text-[#f6b52e]" /><div className="text-xl font-bold mt-4">Under Maintenance</div><p className="text-sm text-slate-500 mt-1">We&apos;ll be back shortly.</p></div></div>;
   }
   if (uid === undefined) return null;
   if (splash) return <Splash onDone={() => setSplash(false)} />;
-  if (!uid || !user) return <><Auth onSignedIn={(id) => signIn(id)} /><Toast msg={toast} /></>;
+  if (!uid || !user) return <><Auth onSignedIn={(id) => { signIn(id); showToast("Login successful!"); }} toast={showToast} /><Toast msg={toast} /></>;
 
-  const tab = TAB_OF[route.name];
   let screen: React.ReactNode;
   switch (route.name) {
-    case "home": screen = <Home nav={nav} />; break;
-    case "games": screen = <Games nav={nav} initial={route.cat} />; break;
-    case "bid": screen = <PlaceBid nav={nav} gameId={route.gameId} />; break;
-    case "results": screen = <Results nav={nav} />; break;
-    case "wallet": screen = <WalletScreen nav={nav} />; break;
-    case "addfunds": screen = <AddFunds nav={nav} />; break;
+    case "home": screen = <Home nav={nav} openMenu={() => setDrawer(true)} />; break;
+    case "list": screen = <MarketList nav={nav} cat={route.cat} />; break;
+    case "market": screen = <GameTypes nav={nav} gameId={route.gameId} />; break;
+    case "bet": screen = <BetScreen key={route.type} nav={nav} gameId={route.gameId} type={route.type} />; break;
+    case "chart": screen = <Chart nav={nav} gameId={route.gameId} />; break;
+    case "deposit": screen = <Deposit nav={nav} />; break;
     case "withdraw": screen = <Withdraw nav={nav} />; break;
-    case "bets": screen = <MyBets nav={nav} />; break;
-    case "profile": screen = <Profile nav={nav} />; break;
-    case "notifications": screen = <Notifications nav={nav} />; break;
+    case "bank": screen = <BankDetails nav={nav} />; break;
+    case "withdrawHistory": screen = <WithdrawHistory nav={nav} />; break;
+    case "bids": screen = <BidHistory nav={nav} />; break;
+    case "wins": screen = <WinHistory nav={nav} />; break;
+    case "statement": screen = <Statement nav={nav} />; break;
+    case "rates": screen = <GameRatesScreen nav={nav} />; break;
     case "howto": screen = <HowToPlay nav={nav} />; break;
-    case "support": screen = <Support nav={nav} />; break;
+    case "notices": screen = <Notices nav={nav} />; break;
+    case "profile": screen = <Profile nav={nav} />; break;
+    case "contact": screen = <Contact nav={nav} />; break;
   }
 
   return (
     <SessionCtx.Provider value={{ uid, toast: showToast }}>
-      <div key={stack.length + route.name} className={`fadein ${tab ? "pb-24" : "pb-8"}`}>{screen}</div>
-      {tab && <BottomNav tab={tab} onTab={(t) => nav.reset({ name: t })} />}
+      <div key={stack.length + route.name} className="fadein pb-10">{screen}</div>
+      {drawer && <Drawer nav={nav} onClose={() => setDrawer(false)} />}
       <Toast msg={toast} />
     </SessionCtx.Provider>
   );

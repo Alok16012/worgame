@@ -1,135 +1,103 @@
 "use client";
 
 import { useState } from "react";
-import { log, marketStatus, nid } from "../../lib/engine";
-import { fmtTime, inr } from "../../lib/format";
-import { useNow, useStore } from "../../lib/store";
-import { CAT_ICON, CAT_LABEL, type Cat, type Game } from "../../lib/types";
-import { AnkPicker, Btn, Card, Field, Modal, StatusBadge, Table, Title, useAdmin } from "../ui";
-
-const validTime = (t: string) => /^\d{2}:\d{2}$/.test(t);
+import { Pencil } from "lucide-react";
+import { log, nid } from "../../lib/engine";
+import { fmtTime } from "../../lib/format";
+import { DIGITS, DOUBLE_PANA, JODIS, SINGLE_PANA, TRIPLE_PANA } from "../../lib/matka";
+import { useStore } from "../../lib/store";
+import { CAT_LABEL, CAT_TYPES, TYPE_LABEL, type Cat, type Game, type GameType, type Rate } from "../../lib/types";
+import { Btn, Card, DataTable, Field, Modal, YesNo, useAdmin } from "../ui";
 
 export function GameNames({ cat }: { cat: Cat }) {
   const { state: s, update } = useStore();
-  const { toast, confirm } = useAdmin();
-  const now = useNow();
-  const games = s.games.filter((g) => g.cat === cat);
-  const [f, setF] = useState({ name: "", open: "10:00", close: "11:00", rate: cat === "starline" ? "9" : "9.5" });
+  const { toast } = useAdmin();
+  const two = cat === "main";
+  const blank = { id: 0, cat, name: "", open: "10:00", close: "11:00", active: true } as Game;
   const [edit, setEdit] = useState<Game | null>(null);
-
-  const add = () => {
-    const name = f.name.trim();
-    if (!name) return toast("Game name is required", "bad");
-    if (!validTime(f.open) || !validTime(f.close) || f.open >= f.close) return toast("Close time must be after open time", "bad");
-    if (!(Number(f.rate) > 1)) return toast("Rate must be greater than 1", "bad");
-    if (s.games.some((g) => g.name.toLowerCase() === name.toLowerCase())) return toast("A game with this name exists", "bad");
-    update((d) => { d.games.push({ id: nid(d), cat, name, open: f.open, close: f.close, rate: Number(f.rate), active: true, numbers: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] }); log(d, "Add Game", `${name} (${CAT_LABEL[cat]})`); });
-    setF({ ...f, name: "" });
-    toast("Game added", "ok");
-  };
+  const games = s.games.filter((g) => g.cat === cat);
 
   const save = () => {
     if (!edit) return;
-    if (!edit.name.trim() || edit.open >= edit.close || !(edit.rate > 1)) return toast("Check name, timings and rate", "bad");
-    update((d) => { const i = d.games.findIndex((g) => g.id === edit.id); d.games[i] = { ...edit, name: edit.name.trim() }; log(d, "Edit Game", edit.name); });
+    const name = edit.name.trim().toUpperCase();
+    if (!name) return toast("Game name is required", "bad");
+    if (two && edit.open >= edit.close) return toast("Close time must be after open time", "bad");
+    if (s.games.some((g) => g.cat === cat && g.name === name && g.id !== edit.id)) return toast("Game name already exists", "bad");
+    const g: Game = { ...edit, name, open: two ? edit.open : edit.close };
+    update((d) => {
+      if (g.id) d.games = d.games.map((x) => (x.id === g.id ? g : x));
+      else d.games.push({ ...g, id: nid(d) });
+      log(d, g.id ? "Edit Game" : "Add Game", `${CAT_LABEL[cat]} ${name}`);
+    });
+    toast(g.id ? "Game updated" : "Game added", "ok");
     setEdit(null);
-    toast("Game updated", "ok");
-  };
-
-  const remove = async (g: Game) => {
-    if (s.bids.some((b) => b.gameId === g.id)) return toast("This game has bids — switch it off instead", "bad");
-    if (await confirm({ title: "Delete game", body: <>Delete <b>{g.name}</b>?</>, ok: "Delete", tone: "red" })) update((d) => { d.games = d.games.filter((x) => x.id !== g.id); log(d, "Delete Game", g.name); });
   };
 
   return (
-    <>
-      <Title t={`${CAT_ICON[cat]} ${CAT_LABEL[cat]} — Game Name`} s="A market has an open time (bidding starts) and a close time (bidding stops, result due)." />
-      <Card title={`Add ${CAT_LABEL[cat]} market`}>
-        <div className="grid md:grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 items-end">
-          <Field label="Game Name"><input className="admin-input" placeholder="e.g. Lucky Noon" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
-          <Field label="Open Time"><input type="time" className="admin-input" value={f.open} onChange={(e) => setF({ ...f, open: e.target.value })} /></Field>
-          <Field label="Close Time"><input type="time" className="admin-input" value={f.close} onChange={(e) => setF({ ...f, close: e.target.value })} /></Field>
-          <Field label="Rate (x)"><input type="number" step="0.1" className="admin-input" value={f.rate} onChange={(e) => setF({ ...f, rate: e.target.value })} /></Field>
-          <Btn onClick={add}>Add Game</Btn>
-        </div>
-      </Card>
-      <Card className="mt-4">
-        <Table head={["ID", "Game Name", "Open", "Close", "Rate", "Today", "Active", "Action"]} rows={games.map((g) => [
-          `#${g.id}`, <b key="n" className="text-slate-900">{g.name}</b>, fmtTime(g.open), fmtTime(g.close), `${g.rate}x`, <StatusBadge key="s" s={marketStatus(s, g, undefined, now)} />,
-          <button key="t" onClick={() => update((d) => { const x = d.games.find((y) => y.id === g.id)!; x.active = !x.active; log(d, "Game Status", `${x.name} → ${x.active ? "on" : "off"}`); })}
-            className={`w-11 h-6 rounded-full p-0.5 transition-colors ${g.active ? "bg-emerald-500" : "bg-slate-300"}`} aria-label="Toggle active">
-            <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${g.active ? "translate-x-5" : ""}`} />
-          </button>,
-          <div key="a" className="flex gap-1.5"><Btn size="sm" variant="ghost" onClick={() => setEdit({ ...g })}>Edit</Btn><Btn size="sm" variant="ghost" onClick={() => remove(g)}>Delete</Btn></div>,
-        ])} />
-      </Card>
+    <Card title={`${cat === "main" ? "" : CAT_LABEL[cat] + " "}Game Name`} right={<Btn variant="dark" onClick={() => setEdit(blank)}>+ Add Game</Btn>}>
+      <DataTable head={["Sr No", "Game Name", ...(two ? ["Open Time", "Close Time"] : ["Result Time"]), "Active", "Action"]}
+        rows={games.map((g, i) => [i + 1, <b key="n">{g.name}</b>, ...(two ? [fmtTime(g.open), fmtTime(g.close)] : [fmtTime(g.close)]),
+          <YesNo key="a" on={g.active} onChange={() => update((d) => { const x = d.games.find((y) => y.id === g.id)!; x.active = !x.active; log(d, "Game Status", `${x.name} → ${x.active ? "active" : "inactive"}`); })} />,
+          <button key="e" className="p-1.5 text-slate-600 hover:text-[#0d6efd]" onClick={() => setEdit({ ...g })} aria-label="Edit"><Pencil size={15} /></button>])}
+        text={games.map((g) => g.name)} />
       {edit && (
-        <Modal title={`Edit ${edit.name}`} onClose={() => setEdit(null)} footer={<><Btn variant="ghost" onClick={() => setEdit(null)}>Cancel</Btn><Btn onClick={save}>Update</Btn></>}>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="Name"><input className="admin-input" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
-            <Field label="Rate (x)"><input type="number" step="0.1" className="admin-input" value={edit.rate} onChange={(e) => setEdit({ ...edit, rate: Number(e.target.value) })} /></Field>
-            <Field label="Open"><input type="time" className="admin-input" value={edit.open} onChange={(e) => setEdit({ ...edit, open: e.target.value })} /></Field>
-            <Field label="Close"><input type="time" className="admin-input" value={edit.close} onChange={(e) => setEdit({ ...edit, close: e.target.value })} /></Field>
+        <Modal title={edit.id ? "Edit Game" : "Add Game"} onClose={() => setEdit(null)} footer={<><Btn variant="ghost" onClick={() => setEdit(null)}>Close</Btn><Btn onClick={save}>Submit</Btn></>}>
+          <div className="space-y-3">
+            <Field label="Game Name"><input className="admin-input uppercase" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
+            {two && <Field label="Open Time"><input type="time" className="admin-input" value={edit.open} onChange={(e) => setEdit({ ...edit, open: e.target.value })} /></Field>}
+            <Field label={two ? "Close Time" : "Result Time"}><input type="time" className="admin-input" value={edit.close} onChange={(e) => setEdit({ ...edit, close: e.target.value })} /></Field>
           </div>
         </Modal>
       )}
-    </>
+    </Card>
   );
 }
 
 export function GameRates({ cat }: { cat: Cat }) {
   const { state: s, update } = useStore();
   const { toast } = useAdmin();
-  const games = s.games.filter((g) => g.cat === cat);
-  const [rates, setRates] = useState<Record<number, string>>(() => Object.fromEntries(games.map((g) => [g.id, String(g.rate)])));
-  const [all, setAll] = useState("");
+  const types = CAT_TYPES[cat];
+  const [rates, setRates] = useState<Partial<Record<GameType, Rate>>>(() => structuredClone(s.settings.rates[cat]));
 
   const save = () => {
-    if (Object.values(rates).some((r) => !(Number(r) > 1))) return toast("Every rate must be greater than 1", "bad");
-    update((d) => { for (const g of d.games) if (rates[g.id] !== undefined) g.rate = Number(rates[g.id]); log(d, "Game Rates", `${CAT_LABEL[cat]}: ${games.map((g) => `${g.name} ${rates[g.id]}x`).join(", ")}`); });
-    toast("Rates updated", "ok");
+    if (types.some((t) => !(rates[t]?.bet && rates[t]!.bet > 0 && rates[t]!.win > rates[t]!.bet))) return toast("Value 2 (win) must be more than Value 1 (bid) for every game type", "bad");
+    update((d) => { d.settings.rates[cat] = rates; log(d, "Game Rates", `${CAT_LABEL[cat]}: ${types.map((t) => `${TYPE_LABEL[t]} ${rates[t]!.bet}→${rates[t]!.win}`).join(", ")}`); });
+    toast("Game rates updated", "ok");
   };
 
   return (
-    <>
-      <Title t={`${CAT_ICON[cat]} ${CAT_LABEL[cat]} — Game Rates`} s="Winning amount = Bid × Rate. The rate is locked on each bid when placed, so changes only affect new bids." />
-      <Card>
-        <div className="flex flex-wrap gap-3 items-end mb-4">
-          <Field label="Set same rate for all" className="w-52"><input type="number" step="0.1" className="admin-input" placeholder="e.g. 9.5" value={all} onChange={(e) => setAll(e.target.value)} /></Field>
-          <Btn variant="ghost" onClick={() => Number(all) > 1 && setRates(Object.fromEntries(games.map((g) => [g.id, all])))}>Apply to all</Btn>
-        </div>
-        <Table max={false} head={["Game", "Current Rate", "New Rate", "₹10 bid wins"]} rows={games.map((g) => [
-          <b key="n" className="text-slate-900">{g.name}</b>, `${g.rate}x`,
-          <input key="i" type="number" step="0.1" className="admin-input !w-28" value={rates[g.id] ?? ""} onChange={(e) => setRates({ ...rates, [g.id]: e.target.value })} />,
-          inr(10 * (Number(rates[g.id]) || 0)),
-        ])} />
-        <Btn className="mt-4" onClick={save}>Update Rates</Btn>
-      </Card>
-    </>
+    <Card title={`${cat === "main" ? "" : CAT_LABEL[cat] + " "}Game Rates`}>
+      <p className="text-sm text-slate-500 mb-4">Value 1 is the bid, Value 2 is the winning amount. Example: Single Ank 10 → 100 means a ₹10 bid wins ₹100. Rates are locked on each bid when it is placed.</p>
+      <div className="space-y-3">
+        {types.map((t) => (
+          <div key={t} className="grid grid-cols-[1fr_1fr_1fr] sm:grid-cols-[200px_160px_160px_1fr] gap-3 items-end">
+            <div className="font-medium text-slate-700 pb-2">{TYPE_LABEL[t]}</div>
+            <Field label="Value 1"><input className="admin-input" inputMode="numeric" value={rates[t]?.bet ?? ""} onChange={(e) => setRates({ ...rates, [t]: { bet: Number(e.target.value.replace(/\D/g, "")), win: rates[t]?.win ?? 0 } })} /></Field>
+            <Field label="Value 2"><input className="admin-input" inputMode="numeric" value={rates[t]?.win ?? ""} onChange={(e) => setRates({ ...rates, [t]: { bet: rates[t]?.bet ?? 0, win: Number(e.target.value.replace(/\D/g, "")) } })} /></Field>
+            <div className="hidden sm:block text-xs text-slate-400 pb-3">{rates[t]?.bet ? `${(rates[t]!.win / rates[t]!.bet).toFixed(1)}x` : ""}</div>
+          </div>
+        ))}
+      </div>
+      <Btn className="mt-5" onClick={save}>Update</Btn>
+    </Card>
   );
 }
 
 export function GameNumbers() {
-  const { state: s, update } = useStore();
-  const toggle = (g: Game, a: number) =>
-    update((d) => {
-      const x = d.games.find((y) => y.id === g.id)!;
-      x.numbers = x.numbers.includes(a) ? x.numbers.filter((n) => n !== a) : [...x.numbers, a].sort((p, q) => p - q);
-      log(d, "Game Numbers", `${x.name} → ${x.numbers.join("") || "none"}`);
-    });
+  const block = (title: string, list: string[], cols: string) => (
+    <Card title={title} className="mb-5">
+      <div className={`grid ${cols} gap-3`}>
+        {list.map((n) => <div key={n} className="border border-[#0d6efd]/60 text-[#0d6efd] rounded text-center py-1.5 text-sm">{n}</div>)}
+      </div>
+    </Card>
+  );
   return (
     <>
-      <Title t="Game Numbers" s="Switch an Ank off to stop users bidding on it (e.g. when exposure on that number is too high)." />
-      <Card>
-        <div className="divide-y divide-slate-100">
-          {s.games.map((g) => (
-            <div key={g.id} className="flex flex-wrap items-center gap-4 py-3">
-              <div className="w-48"><div className="font-semibold text-slate-900">{g.name}</div><div className="text-xs text-slate-400">{CAT_LABEL[g.cat]} · {g.numbers.length}/10 enabled</div></div>
-              <AnkPicker selected={g.numbers} onPick={(a) => toggle(g, a)} />
-            </div>
-          ))}
-        </div>
-      </Card>
+      {block("Single Digit", DIGITS, "grid-cols-5")}
+      {block("Jodi", JODIS, "grid-cols-5 sm:grid-cols-10")}
+      {block("Single Pana", SINGLE_PANA, "grid-cols-5 sm:grid-cols-10")}
+      {block("Double Pana", DOUBLE_PANA, "grid-cols-5 sm:grid-cols-10")}
+      {block("Triple Pana", TRIPLE_PANA, "grid-cols-5 sm:grid-cols-10")}
     </>
   );
 }

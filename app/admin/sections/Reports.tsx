@@ -4,16 +4,16 @@ import { useState } from "react";
 import { Download } from "lucide-react";
 import { findGame, findUser } from "../../lib/engine";
 import { addDays, fmtDate, fmtTime, inr, sum, ymd } from "../../lib/format";
+import { byAnk, numbersFor } from "../../lib/matka";
 import { useStore } from "../../lib/store";
-import { CAT_LABEL, type BidStatus, type Cat } from "../../lib/types";
-import { BidBadge, Btn, Card, Field, Stat, Table, Title } from "../ui";
-import { GameSelect } from "./Results";
+import { CAT_LABEL, CAT_TYPES, TYPE_LABEL, type Cat, type GameType, type Session } from "../../lib/types";
+import { bidTypeLabel, GameSelect, sessionLabel } from "../common";
+import { BidBadge, Btn, Card, DataTable, Field, Stat } from "../ui";
 
 function downloadCsv(name: string, head: string[], rows: (string | number)[][]) {
   const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-  const csv = [head, ...rows].map((r) => r.map(esc).join(",")).join("\n");
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.href = URL.createObjectURL(new Blob([[head, ...rows].map((r) => r.map(esc).join(",")).join("\n")], { type: "text/csv" }));
   a.download = name;
   a.click();
   URL.revokeObjectURL(a.href);
@@ -21,85 +21,88 @@ function downloadCsv(name: string, head: string[], rows: (string | number)[][]) 
 
 export function BidHistory({ cat }: { cat?: Cat }) {
   const { state: s } = useStore();
-  const [draft, setDraft] = useState({ from: addDays(-6), to: ymd(), game: "" as number | "", status: "" as BidStatus | "", q: "" });
+  const types = cat ? CAT_TYPES[cat] : CAT_TYPES.main;
+  const [draft, setDraft] = useState<{ from: string; to: string; game: number | ""; type: GameType | ""; session: Session | "" }>({ from: addDays(-1), to: ymd(), game: "", type: "", session: "" });
   const [f, setF] = useState(draft);
   const list = s.bids.filter((b) => {
-    const g = findGame(s, b.gameId), u = findUser(s, b.userId)!;
-    return b.date >= f.from && b.date <= f.to && (!cat || g?.cat === cat) && (!f.game || b.gameId === f.game) && (!f.status || b.status === f.status)
-      && (!f.q || u.name.toLowerCase().includes(f.q.toLowerCase()) || u.mobile.includes(f.q));
+    const g = findGame(s, b.gameId);
+    return b.date >= f.from && b.date <= f.to && (cat ? g?.cat === cat : true) && (!f.game || b.gameId === f.game) && (!f.type || b.type === f.type) && (!f.session || b.session === f.session);
   }).slice().reverse();
   const live = list.filter((b) => b.status !== "reverted");
   const amt = sum(live, (b) => b.amount), win = sum(live, (b) => b.win ?? 0);
 
-  const rowsCsv = () => list.map((b) => { const u = findUser(s, b.userId)!; return [b.id, b.date, b.time, u.name, u.mobile, findGame(s, b.gameId)?.name ?? "", b.ank, b.amount, b.rate, b.win ?? 0, b.status]; });
-
   return (
     <>
-      <Title t={cat ? `${CAT_LABEL[cat]} Bid History` : "Bid History Report"} s="Every bid with its outcome. Filter, then export to CSV."
-        right={<Btn variant="ghost" size="sm" onClick={() => downloadCsv(`bids-${f.from}-to-${f.to}.csv`, ["Bid ID", "Date", "Time", "User", "Mobile", "Game", "Ank", "Amount", "Rate", "Win", "Status"], rowsCsv())}><Download size={14} /> Export CSV</Btn>} />
-      <Card>
-        <div className="grid sm:grid-cols-3 xl:grid-cols-[1fr_1fr_1.3fr_1fr_1.3fr_auto] gap-3 items-end">
-          <Field label="From"><input type="date" className="admin-input" value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value })} /></Field>
-          <Field label="To"><input type="date" className="admin-input" value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} /></Field>
-          <Field label="Game"><GameSelect cat={cat} all="All Games" value={draft.game} onChange={(v) => setDraft({ ...draft, game: v })} /></Field>
-          <Field label="Status">
-            <select className="admin-input" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value as BidStatus | "" })}>
-              <option value="">All</option><option value="pending">Pending</option><option value="won">Won</option><option value="lost">Lost</option><option value="reverted">Reverted</option>
-            </select>
+      <Card title={cat ? `${CAT_LABEL[cat]} Bid History` : "Bid History Report"} right={
+        <Btn variant="ghost" size="sm" onClick={() => downloadCsv(`bids-${f.from}-${f.to}.csv`, ["User", "Mobile", "Game", "Type", "Session", "Number", "Amount", "Win", "Status", "Date", "Time"],
+          list.map((b) => { const u = findUser(s, b.userId)!; return [u.name, u.mobile, findGame(s, b.gameId)?.name ?? "", bidTypeLabel(b), sessionLabel(b), b.value, b.amount, b.win ?? 0, b.status, b.date, b.time]; }))}><Download size={14} /> Export</Btn>}>
+        <div className="grid sm:grid-cols-3 xl:grid-cols-[1fr_1fr_1.4fr_1fr_1fr_auto] gap-4 items-end">
+          <Field label="From Date"><input type="date" className="admin-input" value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value })} /></Field>
+          <Field label="To Date"><input type="date" className="admin-input" value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} /></Field>
+          <Field label="Game Name"><GameSelect cat={cat} all="All Game" value={draft.game} onChange={(v) => setDraft({ ...draft, game: v })} /></Field>
+          <Field label="Game Type">
+            <select className="admin-input" value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value as GameType | "" })}><option value="">All Type</option>{types.map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}</select>
           </Field>
-          <Field label="User"><input className="admin-input" placeholder="Name / mobile" value={draft.q} onChange={(e) => setDraft({ ...draft, q: e.target.value })} /></Field>
-          <Btn onClick={() => setF(draft)}>Filter</Btn>
+          {cat === "main" || !cat ? (
+            <Field label="Session"><select className="admin-input" value={draft.session} onChange={(e) => setDraft({ ...draft, session: e.target.value as Session | "" })}><option value="">All</option><option value="open">Open</option><option value="close">Close</option></select></Field>
+          ) : <div />}
+          <Btn onClick={() => setF(draft)}>Submit</Btn>
         </div>
       </Card>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 my-4">
-        <Stat label="Bids" value={list.length} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 my-5">
+        <Stat label="Total Bids" value={list.length} />
         <Stat label="Bid Amount" value={inr(amt)} />
         <Stat label="Winning Amount" value={inr(win)} tone="red" />
         <Stat label="Profit" value={inr(amt - win)} tone={amt - win >= 0 ? "green" : "red"} />
       </div>
       <Card>
-        <Table head={["Bid ID", "Date", "User", "Mobile", "Game", "Ank", "Amount", "Rate", "Win", "Status"]} rows={list.slice(0, 400).map((b) => {
-          const u = findUser(s, b.userId)!;
-          return [`#${b.id}`, `${fmtDate(b.date)} ${fmtTime(b.time)}`, u.name, u.mobile, findGame(s, b.gameId)?.name, <b key="a">{b.ank}</b>, inr(b.amount), `${b.rate}x`,
-            b.win ? <b key="w" className="text-emerald-600">{inr(b.win)}</b> : "—", <BidBadge key="s" s={b.status} />];
-        })} />
-        {list.length > 400 && <div className="text-xs text-slate-400 mt-2">Showing latest 400 of {list.length}. Export CSV for all.</div>}
+        <DataTable head={["Sr No", "User Name", "Mobile", "Game Name", "Game Type", "Session", "Number", "Amount", "Win", "Status", "Bid Time"]}
+          rows={list.map((b, i) => { const u = findUser(s, b.userId)!; return [i + 1, u.name, u.mobile, findGame(s, b.gameId)?.name, bidTypeLabel(b), sessionLabel(b), <b key="v">{b.value}</b>, b.amount, b.win ?? "—", <BidBadge key="s" s={b.status} />, `${fmtDate(b.date)} ${fmtTime(b.time)}`]; })}
+          text={list.map((b) => { const u = findUser(s, b.userId)!; return `${u.name} ${u.mobile} ${b.value}`; })} />
       </Card>
     </>
   );
 }
 
+/** Number-wise sell: how much was bid on every number of a game type for a market/session. */
 export function CustomerSell() {
   const { state: s } = useStore();
-  const [draft, setDraft] = useState({ from: addDays(-6), to: ymd() });
+  const [draft, setDraft] = useState<{ date: string; game: number | ""; type: GameType; session: Session }>({ date: ymd(), game: "", type: "single_ank", session: "open" });
   const [f, setF] = useState(draft);
-  const rows = s.users.map((u) => {
-    const b = s.bids.filter((x) => x.userId === u.id && x.date >= f.from && x.date <= f.to && x.status !== "reverted");
-    const tx = s.txns.filter((x) => x.userId === u.id && x.date >= f.from && x.date <= f.to);
-    return {
-      u, n: b.length, amt: sum(b, (x) => x.amount), win: sum(b, (x) => x.win ?? 0),
-      dep: sum(tx.filter((x) => x.type === "deposit"), (x) => x.amount),
-      wd: sum(tx.filter((x) => x.type === "withdraw" && x.status !== "rejected"), (x) => x.amount),
-    };
-  }).filter((r) => r.n || r.dep || r.wd).sort((a, b) => b.amt - a.amt);
+  const g = f.game ? findGame(s, f.game) : undefined;
+  const sessioned = g?.cat === "main" && f.type !== "jodi" && f.type !== "full_sangam";
+  const bids = g ? s.bids.filter((b) => b.gameId === g.id && b.date === f.date && b.type === f.type && b.status !== "reverted" && (!sessioned || b.session === f.session)) : [];
+  const amountOf = (v: string) => sum(bids.filter((b) => b.value === v), (b) => b.amount);
+  const list = numbersFor(f.type);
+  const types = g ? CAT_TYPES[g.cat] : CAT_TYPES.main;
+
+  const cell = (v: string) => {
+    const a = amountOf(v);
+    return <div key={v} className={`rounded border text-center py-1.5 ${a ? "border-[#0d6efd] bg-[#0d6efd]/5" : "border-slate-200"}`}><div className="text-sm font-semibold text-slate-800">{v}</div><div className={`text-xs ${a ? "text-[#0d6efd] font-semibold" : "text-slate-400"}`}>{a}</div></div>;
+  };
 
   return (
     <>
-      <Title t="Customer Sell Report" s="Per-customer summary. Platform P/L = that customer's bids − their winnings."
-        right={<Btn variant="ghost" size="sm" onClick={() => downloadCsv(`customers-${f.from}-to-${f.to}.csv`, ["User", "Mobile", "Bids", "Bid Amount", "Won", "Platform P/L", "Deposits", "Withdrawals", "Wallet"], rows.map((r) => [r.u.name, r.u.mobile, r.n, r.amt, r.win, r.amt - r.win, r.dep, r.wd, r.u.balance]))}><Download size={14} /> Export CSV</Btn>} />
-      <Card>
-        <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
-          <Field label="From"><input type="date" className="admin-input" value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value })} /></Field>
-          <Field label="To"><input type="date" className="admin-input" value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} /></Field>
-          <Btn onClick={() => setF(draft)}>Filter</Btn>
+      <Card title="Customer Sell Report">
+        <div className="grid sm:grid-cols-2 xl:grid-cols-[1fr_1.4fr_1fr_1fr_auto] gap-4 items-end">
+          <Field label="Date"><input type="date" className="admin-input" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} /></Field>
+          <Field label="Game Name"><GameSelect all="-Select Game Name-" value={draft.game} onChange={(v) => setDraft({ ...draft, game: v, type: v && findGame(s, v)?.cat === "gali" ? "jodi" : "single_ank" })} /></Field>
+          <Field label="Game Type"><select className="admin-input" value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value as GameType })}>{(draft.game ? CAT_TYPES[findGame(s, draft.game)!.cat] : types).map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}</select></Field>
+          <Field label="Session"><select className="admin-input" value={draft.session} onChange={(e) => setDraft({ ...draft, session: e.target.value as Session })}><option value="open">Open</option><option value="close">Close</option></select></Field>
+          <Btn onClick={() => setF(draft)}>Submit</Btn>
         </div>
       </Card>
-      <Card className="mt-4">
-        <Table head={["User", "Mobile", "Bids", "Bid Amount", "Won", "Platform P/L", "Deposits", "Withdrawals", "Wallet Now"]} rows={rows.map((r) => [
-          <b key="n" className="text-slate-900">{r.u.name}</b>, r.u.mobile, r.n, inr(r.amt), inr(r.win),
-          <b key="pl" className={r.amt - r.win >= 0 ? "text-emerald-600" : "text-rose-600"}>{inr(r.amt - r.win)}</b>, inr(r.dep), inr(r.wd), inr(r.u.balance),
-        ])} />
-      </Card>
+      {g && (
+        <Card className="mt-5" title={`${g.name} · ${TYPE_LABEL[f.type]}${sessioned ? ` · ${f.session === "open" ? "Open" : "Close"}` : ""} · ${fmtDate(f.date)}`} right={<span className="text-sm text-slate-600">Total <b>{inr(sum(bids, (b) => b.amount))}</b> on {bids.length} bids</span>}>
+          {list.length ? (
+            f.type.endsWith("_pana") ? byAnk(list).map((grp) => (
+              <div key={grp.ank} className="mb-4"><div className="text-sm font-semibold mb-2">Ank {grp.ank}</div><div className="grid grid-cols-4 sm:grid-cols-8 lg:grid-cols-12 gap-2">{grp.items.map(cell)}</div></div>
+            )) : <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">{list.map(cell)}</div>
+          ) : (
+            <DataTable head={["Number", "Bids", "Amount"]} rows={Object.entries(bids.reduce<Record<string, number[]>>((m, b) => { (m[b.value] ??= []).push(b.amount); return m; }, {})).sort((a, b) => sum(b[1], (x) => x) - sum(a[1], (x) => x)).map(([v, a]) => [v, a.length, inr(sum(a, (x) => x))])} />
+          )}
+        </Card>
+      )}
     </>
   );
 }

@@ -1,18 +1,23 @@
-import type { Cat } from "../lib/types";
+import type { Cat, GameType } from "../lib/types";
 
 export type Route =
   | { name: "home" }
-  | { name: "games"; cat?: Cat }
-  | { name: "bid"; gameId: number }
-  | { name: "results" }
-  | { name: "wallet" }
-  | { name: "addfunds" }
+  | { name: "list"; cat: "starline" | "gali" }
+  | { name: "market"; gameId: number }
+  | { name: "bet"; gameId: number; type: GameType }
+  | { name: "chart"; gameId: number }
+  | { name: "deposit" }
   | { name: "withdraw" }
-  | { name: "bets" }
-  | { name: "profile" }
-  | { name: "notifications" }
+  | { name: "bank" }
+  | { name: "withdrawHistory" }
+  | { name: "bids"; cat?: Cat }
+  | { name: "wins" }
+  | { name: "statement" }
+  | { name: "rates" }
   | { name: "howto" }
-  | { name: "support" };
+  | { name: "notices" }
+  | { name: "profile" }
+  | { name: "contact" };
 
 export interface Nav {
   push: (r: Route) => void;
@@ -24,5 +29,5 @@ export interface Nav {
 /** Signed-in player + app-level toast, provided by WordGameApp. */
 export interface Session {
   uid: number;
-  toast: (msg: string) => void;
+  toast: (msg: string, tone?: "ok" | "bad") => void;
 }

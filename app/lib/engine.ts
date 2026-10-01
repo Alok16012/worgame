@@ -1,8 +1,10 @@
 import { fmtDate, hhmm, inr, mins, sum, ymd } from "./format";
-import type { Bid, Game, MarketStatus, State, Txn, TxnType } from "./types";
+import { isPana, panaDigit, panaType, resultText } from "./matka";
+import { CAT_TYPES, TYPE_LABEL, type Bid, type Cat, type Game, type GameType, type Result, type Session, type State, type Txn, type TxnType, type User } from "./types";
 
-// All game rules live here as plain functions over State. The store clones state before calling
-// them, so a thrown GameError leaves the saved data untouched. In production these would run on the server.
+// All game rules as plain functions over State. The store runs them on a cloned draft, so a thrown
+// GameError leaves saved data untouched. In production each exported action becomes a server endpoint
+// wrapped in a DB transaction.
 
 export class GameError extends Error {}
 const fail = (msg: string): never => { throw new GameError(msg); };
@@ -11,26 +13,50 @@ export const nid = (s: State) => ++s.seq;
 export const findUser = (s: State, id: number) => s.users.find((u) => u.id === id);
 export const findGame = (s: State, id: number) => s.games.find((g) => g.id === id);
 export const resultOf = (s: State, gameId: number, date: string) => s.results.find((r) => r.gameId === gameId && r.date === date);
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export function log(s: State, action: string, detail: string, by = "admin") {
   s.audit.push({ id: nid(s), at: `${ymd()} ${hhmm()}`, by, action, detail });
 }
 
-function addTxn(s: State, userId: number, type: TxnType, dir: "cr" | "dr", amount: number, extra: Partial<Txn> = {}) {
-  const t: Txn = { id: nid(s), userId, type, dir, amount, date: ymd(), time: hhmm(), status: "success", ...extra };
+type At = { date: string; time: string };
+const nowAt = (): At => ({ date: ymd(), time: hhmm() });
+
+function addTxn(s: State, userId: number, type: TxnType, dir: "cr" | "dr", amount: number, remark: string, extra: Partial<Txn> = {}, at: At = nowAt()) {
+  const t: Txn = { id: nid(s), userId, type, dir, amount, remark, status: "success", ...at, ...extra };
   s.txns.push(t);
   return t;
 }
 
-export function marketStatus(s: State, g: Game, date = ymd(), now = new Date()): MarketStatus {
-  if (!g.active) return "inactive";
-  if (resultOf(s, g.id, date)) return "declared";
-  if (s.settings.demoMode) return "open";
-  if (date < ymd(now)) return "closed";
-  if (date > ymd(now)) return "upcoming";
-  const c = now.getHours() * 60 + now.getMinutes();
-  if (c >= mins(g.open) && c < mins(g.close)) return "open";
-  return c < mins(g.open) ? "upcoming" : "closed";
+export const rateOf = (s: State, cat: Cat, type: GameType) => {
+  const r = s.settings.rates[cat][type];
+  return r && r.bet > 0 ? r.win / r.bet : 0;
+};
+
+/* ---------------- market timing ---------------- */
+
+export interface MarketState { openOk: boolean; closeOk: boolean; anyOk: boolean; types: GameType[] }
+const CLOSED: MarketState = { openOk: false, closeOk: false, anyOk: false, types: [] };
+const CLOSE_TYPES: GameType[] = ["single_ank", "single_pana", "double_pana", "triple_pana"];
+
+/**
+ * Which sessions accept bids right now. Main: open session until the open time (or open result),
+ * close session until the close time (or close result); after the open session only close-session
+ * Single Ank / Pana bids are possible. In demo mode a session stays open until its result is declared.
+ */
+export function marketState(s: State, g: Game, now = new Date()): MarketState {
+  if (!g.active) return CLOSED;
+  const r = resultOf(s, g.id, ymd(now));
+  const demo = s.settings.demoMode;
+  const t = now.getHours() * 60 + now.getMinutes();
+  if (g.cat === "main") {
+    const openOk = !r?.openPana && (demo || t < mins(g.open));
+    const closeOk = !r?.closePana && (demo || t < mins(g.close));
+    return { openOk, closeOk, anyOk: openOk || closeOk, types: openOk ? CAT_TYPES.main : closeOk ? CLOSE_TYPES : [] };
+  }
+  const done = g.cat === "starline" ? !!r?.openPana : !!r?.jodi;
+  const ok = !done && (demo || t < mins(g.close));
+  return ok ? { openOk: true, closeOk: true, anyOk: true, types: CAT_TYPES[g.cat] } : CLOSED;
 }
 
 export function withdrawOpen(s: State, now = new Date()) {
@@ -39,86 +65,170 @@ export function withdrawOpen(s: State, now = new Date()) {
   return w.days.includes(now.getDay()) && (s.settings.demoMode || (c >= mins(w.from) && c <= mins(w.to)));
 }
 
-/* ---------------- player actions ---------------- */
+/* ---------------- bids ---------------- */
 
-export function placeBids(s: State, userId: number, gameId: number, anks: number[], amount: number) {
+export function validValue(type: GameType, value: string, session: Session | null) {
+  switch (type) {
+    case "single_ank": case "left_digit": case "right_digit": return /^\d$/.test(value);
+    case "jodi": return /^\d{2}$/.test(value);
+    case "single_pana": case "double_pana": case "triple_pana": return panaType(value) === type;
+    case "half_sangam": {
+      const [p, d] = value.split("-");
+      return !!session && isPana(p ?? "") && /^\d$/.test(d ?? "");
+    }
+    case "full_sangam": {
+      const [p, q] = value.split("-");
+      return isPana(p ?? "") && isPana(q ?? "");
+    }
+  }
+}
+
+export interface BidInput { type: GameType; session: Session | null; value: string; amount: number }
+
+export function placeBids(s: State, userId: number, gameId: number, items: BidInput[]) {
   const u = findUser(s, userId) ?? fail("User not found");
   const g = findGame(s, gameId) ?? fail("Game not found");
-  if (u.status !== "active") fail("Your account is blocked");
-  if (marketStatus(s, g) !== "open") fail("Market is not open for bidding");
-  if (!anks.length) fail("Select at least one Ank");
-  if (anks.some((a) => !g.numbers.includes(a))) fail("One of the selected Anks is disabled");
-  if (!(amount >= s.settings.minBid)) fail(`Minimum bid is ${inr(s.settings.minBid)}`);
-  if (amount > s.settings.maxBid) fail(`Maximum bid is ${inr(s.settings.maxBid)}`);
-  const total = amount * anks.length;
-  if (u.balance < total) fail("Insufficient balance — add money first");
+  if (u.status !== "active") fail("Your account is blocked. Contact admin.");
+  if (!u.betting) fail("Betting is disabled for your account. Contact admin.");
+  if (!items.length) fail("Please enter at least one bid");
+  const st = marketState(s, g);
+  for (const it of items) {
+    if (!st.types.includes(it.type)) fail(`${TYPE_LABEL[it.type]} is closed for ${g.name}`);
+    if (g.cat === "main") {
+      const needsOpen = it.type === "jodi" || it.type === "half_sangam" || it.type === "full_sangam" || it.session === "open";
+      if (needsOpen && !st.openOk) fail("Open session is closed for this market");
+      if (it.session === "close" && !st.closeOk) fail("Close session is closed for this market");
+    }
+    if (!validValue(it.type, it.value, it.session)) fail(`Invalid number ${it.value} for ${TYPE_LABEL[it.type]}`);
+    if (!Number.isInteger(it.amount) || it.amount < s.settings.minBid) fail(`Minimum bid amount is ${inr(s.settings.minBid)}`);
+    if (it.amount > s.settings.maxBid) fail(`Maximum bid amount is ${inr(s.settings.maxBid)}`);
+  }
+  const total = sum(items, (i) => i.amount);
+  if (u.balance < total) fail(`Insufficient wallet balance. Your balance is: ${u.balance}`);
   u.balance -= total;
-  for (const ank of anks) {
-    s.bids.push({ id: nid(s), userId, gameId, ank, amount, rate: g.rate, date: ymd(), time: hhmm(), status: "pending" });
-    addTxn(s, userId, "bet", "dr", amount, { note: `${g.name} • Ank ${ank}` });
+  const at = nowAt();
+  for (const it of items) {
+    s.bids.push({ id: nid(s), userId, gameId, type: it.type, session: g.cat === "main" ? it.session : null, value: it.value, amount: it.amount, rate: rateOf(s, g.cat, it.type), ...at, status: "pending" });
+    addTxn(s, userId, "bet", "dr", it.amount, `Bid placed successfully for the game: ${g.name}`, {}, at);
   }
   return total;
 }
 
-export function deposit(s: State, userId: number, amount: number) {
-  const u = findUser(s, userId) ?? fail("User not found");
-  if (!(amount >= s.settings.minDeposit)) fail(`Minimum deposit is ${inr(s.settings.minDeposit)}`);
-  u.balance += amount;
-  addTxn(s, userId, "deposit", "cr", amount, { mode: "UPI", utr: "UTR" + Math.floor(1e8 + Math.random() * 9e8) });
+/** true/false once the result decides the bid; null while it is still undecided. */
+export function judge(b: Bid, cat: Cat, r: Partial<Result> | undefined): boolean | null {
+  if (!r) return null;
+  if (cat === "gali") {
+    const j = r.jodi;
+    if (!j) return null;
+    return b.type === "left_digit" ? b.value === j[0] : b.type === "right_digit" ? b.value === j[1] : b.value === j;
+  }
+  const P = r.openPana, Q = r.closePana;
+  if (cat === "starline") return P ? (b.type === "single_ank" ? b.value === panaDigit(P) : b.value === P) : null;
+  switch (b.type) {
+    case "single_ank": { const p = b.session === "open" ? P : Q; return p ? b.value === panaDigit(p) : null; }
+    case "single_pana": case "double_pana": case "triple_pana": { const p = b.session === "open" ? P : Q; return p ? b.value === p : null; }
+    case "jodi": return P && Q ? b.value === panaDigit(P) + panaDigit(Q) : null;
+    case "half_sangam": if (!P || !Q) return null; return b.session === "open" ? b.value === `${P}-${panaDigit(Q)}` : b.value === `${Q}-${panaDigit(P)}`;
+    case "full_sangam": return P && Q ? b.value === `${P}-${Q}` : null;
+    default: return null;
+  }
 }
 
-export function requestWithdraw(s: State, userId: number, amount: number, upi: string) {
-  const u = findUser(s, userId) ?? fail("User not found");
-  if (!withdrawOpen(s)) fail("Withdrawals are not allowed right now");
-  if (!(amount >= s.settings.minWithdraw)) fail(`Minimum withdrawal is ${inr(s.settings.minWithdraw)}`);
-  if (amount > u.balance) fail("Insufficient balance");
-  if (!/^[\w.\-]+@[\w]+$/.test(upi.trim())) fail("Enter a valid UPI ID");
-  u.balance -= amount; // held until admin approves or rejects
-  addTxn(s, userId, "withdraw", "dr", amount, { mode: "UPI", upi: upi.trim(), status: "pending" });
-}
-
-export function registerUser(s: State, name: string, mobile: string) {
-  if (!name.trim()) fail("Enter your name");
-  if (!/^[6-9]\d{9}$/.test(mobile)) fail("Enter a valid 10-digit mobile number");
-  if (s.users.some((u) => u.mobile === mobile)) fail("Mobile already registered — please login");
-  const u = { id: nid(s), name: name.trim(), mobile, balance: s.settings.welcomeBonus || 0, status: "active" as const, joined: ymd(), kyc: false, upi: `${mobile}@upi` };
-  s.users.push(u);
-  if (u.balance) addTxn(s, u.id, "manual", "cr", u.balance, { note: "Welcome bonus" });
-  return u.id;
-}
-
-/* ---------------- admin actions ---------------- */
-
-export function declarePreview(s: State, gameId: number, date: string, ank: number | null) {
-  const pending = s.bids.filter((b) => b.gameId === gameId && b.date === date && b.status === "pending");
-  const total = sum(pending, (b) => b.amount);
-  const winners = ank === null ? [] : pending.filter((b) => b.ank === ank);
-  const payout = sum(winners, (b) => b.amount * b.rate);
-  return { pending, total, winners, payout, profit: total - payout };
-}
-
-export function declareResult(s: State, gameId: number, date: string, ank: number) {
-  const g = findGame(s, gameId) ?? fail("Game not found");
-  if (resultOf(s, gameId, date)) fail("Result already declared for this market and date");
-  if (date > ymd()) fail("Cannot declare a result for a future date");
-  if (!Number.isInteger(ank) || ank < 0 || ank > 9) fail("Ank must be 0–9");
-  s.results.push({ id: nid(s), gameId, date, ank, at: `${ymd()} ${hhmm()}`, by: "admin" });
+export function settle(s: State, g: Game, date: string, by: "open" | "close", at: At) {
+  const r = resultOf(s, g.id, date);
   let winners = 0, payout = 0;
-  for (const b of s.bids.filter((b) => b.gameId === gameId && b.date === date && b.status === "pending")) {
-    if (b.ank === ank) {
+  for (const b of s.bids) {
+    if (b.gameId !== g.id || b.date !== date || b.status !== "pending") continue;
+    const w = judge(b, g.cat, r);
+    if (w === null) continue;
+    b.settledBy = by;
+    if (w) {
       b.status = "won";
-      b.win = b.amount * b.rate;
+      b.win = round2(b.amount * b.rate);
       findUser(s, b.userId)!.balance += b.win;
-      addTxn(s, b.userId, "win", "cr", b.win, { note: `${g.name} • Ank ${ank}` });
+      addTxn(s, b.userId, "win", "cr", b.win, `Win amount for the game: ${g.name} (${TYPE_LABEL[b.type]} ${b.value})`, {}, at);
       winners++;
       payout += b.win;
     } else b.status = "lost";
   }
-  s.notices.push({ id: nid(s), title: `Result: ${g.name}`, msg: `${g.name} result for ${fmtDate(date)} is Ank ${ank}.`, target: "All Users", date: ymd(), time: hhmm(), auto: true });
-  log(s, "Declare Result", `${g.name} (${fmtDate(date)}) → Ank ${ank} · ${winners} winners · payout ${inr(payout)}`);
   return { winners, payout };
 }
 
+function proposed(s: State, g: Game, date: string, session: Session, value: string): Partial<Result> {
+  const cur: Partial<Result> = { ...(resultOf(s, g.id, date) ?? {}) };
+  if (g.cat === "gali") cur.jodi = value;
+  else if (session === "open" || g.cat === "starline") cur.openPana = value;
+  else cur.closePana = value;
+  return cur;
+}
+
+function checkDeclare(s: State, g: Game, date: string, session: Session, value: string) {
+  if (date > ymd()) fail("Cannot declare a result for a future date");
+  const r = resultOf(s, g.id, date);
+  if (g.cat === "gali") {
+    if (!/^\d{2}$/.test(value)) fail("Enter a 2-digit jodi");
+    if (r?.jodi) fail("Result already declared");
+    return;
+  }
+  if (!isPana(value)) fail(`${value || "Pana"} is not a valid pana`);
+  if (g.cat === "starline" || session === "open") { if (r?.openPana) fail("Open result already declared"); }
+  else {
+    if (!r?.openPana) fail("Declare the open result first");
+    if (r?.closePana) fail("Close result already declared");
+  }
+}
+
+/** "Show Winner": bids that would win if this result were declared. */
+export function previewWinners(s: State, gameId: number, date: string, session: Session, value: string) {
+  const g = findGame(s, gameId) ?? fail("Select a game");
+  checkDeclare(s, g, date, session, value);
+  const r = proposed(s, g, date, session, value);
+  const pending = s.bids.filter((b) => b.gameId === gameId && b.date === date && b.status === "pending");
+  const winners = pending.filter((b) => judge(b, g.cat, r) === true).map((b) => ({ ...b, win: round2(b.amount * b.rate) }));
+  const settled = pending.filter((b) => judge(b, g.cat, r) !== null);
+  return { winners, payout: sum(winners, (b) => b.win), settledAmount: sum(settled, (b) => b.amount) };
+}
+
+export function declareResult(s: State, gameId: number, date: string, session: Session, value: string) {
+  const g = findGame(s, gameId) ?? fail("Select a game");
+  checkDeclare(s, g, date, session, value);
+  const at = nowAt();
+  let r = resultOf(s, gameId, date);
+  if (!r) { r = { id: nid(s), gameId, date }; s.results.push(r); }
+  Object.assign(r, proposed(s, g, date, session, value));
+  const stamp = `${at.date} ${at.time}`;
+  const by: "open" | "close" = g.cat === "main" && session === "close" ? "close" : "open";
+  if (by === "open") r.openAt = stamp; else r.closeAt = stamp;
+  const out = settle(s, g, date, by, at);
+  s.notices.push({ id: nid(s), title: `${g.name} result`, msg: `${g.name} (${fmtDate(date)}): ${resultText(g.cat, r)}`, target: "All Users", date: at.date, time: at.time });
+  log(s, "Declare Result", `${g.name} ${fmtDate(date)} ${g.cat === "main" ? session : ""} → ${value} · ${out.winners} winners · ${inr(out.payout)}`);
+  return out;
+}
+
+/** Delete a declared session: winnings are taken back and the bids return to pending. */
+export function deleteResult(s: State, gameId: number, date: string, session: Session) {
+  const g = findGame(s, gameId) ?? fail("Game not found");
+  const r = resultOf(s, gameId, date) ?? fail("No result to delete");
+  const by: "open" | "close" = g.cat === "main" && session === "close" ? "close" : "open";
+  if (g.cat === "main" && by === "open" && r.closePana) fail("Delete the close result first");
+  for (const b of s.bids) {
+    if (b.gameId !== gameId || b.date !== date || b.settledBy !== by) continue;
+    if (b.status === "won" && b.win) {
+      findUser(s, b.userId)!.balance -= b.win;
+      addTxn(s, b.userId, "win", "dr", b.win, `Result deleted — win reversed for the game: ${g.name}`);
+    }
+    b.status = "pending";
+    delete b.win;
+    delete b.settledBy;
+  }
+  if (g.cat === "gali") delete r.jodi;
+  else if (by === "open") { delete r.openPana; delete r.openAt; }
+  else { delete r.closePana; delete r.closeAt; }
+  if (!r.openPana && !r.closePana && !r.jodi) s.results = s.results.filter((x) => x.id !== r.id);
+  log(s, "Delete Result", `${g.name} ${fmtDate(date)} ${by}`);
+}
+
+/** Refund pending bids of a market/date (cancelled market), or one bid by id. */
 export function revertBids(s: State, gameId: number, date: string, onlyId?: number) {
   const g = findGame(s, gameId) ?? fail("Game not found");
   const list = s.bids.filter((b) => b.gameId === gameId && b.date === date && b.status === "pending" && (!onlyId || b.id === onlyId));
@@ -126,20 +236,42 @@ export function revertBids(s: State, gameId: number, date: string, onlyId?: numb
   for (const b of list) {
     b.status = "reverted";
     findUser(s, b.userId)!.balance += b.amount;
-    addTxn(s, b.userId, "refund", "cr", b.amount, { note: `Bid revert • ${g.name}` });
+    addTxn(s, b.userId, "refund", "cr", b.amount, `Bid reverted for the game: ${g.name}`);
   }
   const total = sum(list, (b) => b.amount);
   log(s, "Bid Revert", `${g.name} ${fmtDate(date)} · ${list.length} bids · ${inr(total)}`);
   return { count: list.length, total };
 }
 
-export function manualFund(s: State, userId: number, dir: "cr" | "dr", amount: number, note: string) {
-  const u = findUser(s, userId) ?? fail("Select a user");
-  if (!(amount > 0)) fail("Enter a valid amount");
-  if (dir === "dr" && u.balance < amount) fail(`User balance is only ${inr(u.balance)}`);
-  u.balance += dir === "cr" ? amount : -amount;
-  addTxn(s, userId, "manual", dir, amount, { note: note || "Manual" });
-  log(s, "Manual Fund", `${dir === "cr" ? "+" : "-"}${inr(amount)} ${u.name} (${note || "Manual"})`);
+/* ---------------- wallet ---------------- */
+
+export function deposit(s: State, userId: number, amount: number, app: string) {
+  const u = findUser(s, userId) ?? fail("User not found");
+  const { minDeposit: lo, maxDeposit: hi } = s.settings;
+  if (!Number.isInteger(amount) || amount < lo || amount > hi) fail(`Deposit range is ${inr(lo)} - ${inr(hi)}`);
+  u.balance += amount;
+  addTxn(s, userId, "deposit", "cr", amount, "Deposit Fund", { mode: app, utr: "UTR" + Math.floor(1e11 + Math.random() * 9e11), status: "approved" });
+}
+
+export function payoutTarget(u: User) {
+  if (u.bank.account) return `${u.bank.bank} •••• ${u.bank.account.slice(-4)} (${u.bank.ifsc})`;
+  if (u.phonepe) return `PhonePe ${u.phonepe}`;
+  if (u.gpay) return `Google Pay ${u.gpay}`;
+  if (u.paytm) return `Paytm ${u.paytm}`;
+  return "";
+}
+
+export function requestWithdraw(s: State, userId: number, amount: number) {
+  const u = findUser(s, userId) ?? fail("User not found");
+  const w = s.settings.withdraw;
+  if (!withdrawOpen(s)) fail(`Withdraw time is ${w.from} to ${w.to}`);
+  const { minWithdraw: lo, maxWithdraw: hi } = s.settings;
+  if (!Number.isInteger(amount) || amount < lo || amount > hi) fail(`Withdraw range is ${inr(lo)} - ${inr(hi)}`);
+  if (amount > u.balance) fail(`Insufficient wallet balance. Your balance is: ${u.balance}`);
+  const to = payoutTarget(u);
+  if (!to) fail("Please add bank details first");
+  u.balance -= amount; // held until the admin approves or rejects
+  addTxn(s, userId, "withdraw", "dr", amount, "Withdraw request", { status: "pending", payTo: to });
 }
 
 export function decideWithdraw(s: State, txnId: number, status: "approved" | "rejected") {
@@ -147,14 +279,56 @@ export function decideWithdraw(s: State, txnId: number, status: "approved" | "re
   if (t.status !== "pending") fail("Request already processed");
   const u = findUser(s, t.userId)!;
   t.status = status;
-  if (status === "rejected") u.balance += t.amount;
-  log(s, `Withdraw ${status}`, `${u.name} ${inr(t.amount)} → ${t.upi ?? u.upi}`);
+  if (status === "rejected") {
+    u.balance += t.amount;
+    t.remark = "Withdraw request rejected — amount refunded";
+  } else t.remark = "Withdraw request approved";
+  log(s, `Withdraw ${status}`, `${u.name} ${inr(t.amount)} → ${t.payTo}`);
 }
 
-export function setUserStatus(s: State, userId: number, status: "active" | "inactive") {
+/** Admin "Add Money" / "Withdraw" on a user. */
+export function manualFund(s: State, userId: number, dir: "cr" | "dr", amount: number, remark = "") {
+  const u = findUser(s, userId) ?? fail("Select a user");
+  if (!(amount > 0)) fail("Enter a valid amount");
+  if (dir === "dr" && u.balance < amount) fail(`User balance is only ${inr(u.balance)}`);
+  u.balance += dir === "cr" ? amount : -amount;
+  addTxn(s, userId, "manual", dir, amount, remark || (dir === "cr" ? "Amount added by admin" : "Amount withdrawn by admin"), { mode: "Admin" });
+  log(s, dir === "cr" ? "Add Money" : "Withdraw Money", `${u.name} ${inr(amount)}`);
+}
+
+/* ---------------- accounts ---------------- */
+
+export function registerUser(s: State, name: string, mobile: string, password: string) {
+  if (!name.trim()) fail("Please enter your full name");
+  if (!/^[6-9]\d{9}$/.test(mobile)) fail("Please enter a valid 10-digit mobile number");
+  if (password.length < 4) fail("Password must be at least 4 characters");
+  if (s.users.some((u) => u.mobile === mobile)) fail("Mobile number already registered. Please login.");
+  const now = `${ymd()} ${hhmm()}`;
+  const u: User = {
+    id: nid(s), name: name.trim(), mobile, password, email: "", balance: 0, status: "active", betting: true, joined: now, lastLogin: now, loggedIn: true,
+    bank: { holder: "", bank: "", account: "", ifsc: "", address: "" }, paytm: "", phonepe: "", gpay: "",
+  };
+  s.users.push(u);
+  if (s.settings.welcomeBonus > 0) {
+    u.balance += s.settings.welcomeBonus;
+    addTxn(s, u.id, "bonus", "cr", s.settings.welcomeBonus, "Welcome Bonus");
+  }
+  return u.id;
+}
+
+export function loginUser(s: State, mobile: string, password: string) {
+  const u = s.users.find((x) => x.mobile === mobile) ?? fail("Mobile number is not registered");
+  if (u.password !== password) fail("Password is incorrect");
+  if (u.status !== "active") fail("Your account is blocked. Contact admin.");
+  u.lastLogin = `${ymd()} ${hhmm()}`;
+  u.loggedIn = true;
+  return u.id;
+}
+
+export function updateUser(s: State, userId: number, patch: Partial<User>, action?: string) {
   const u = findUser(s, userId) ?? fail("User not found");
-  u.status = status;
-  log(s, "User Status", `${u.name} → ${status}`);
+  Object.assign(u, patch);
+  if (action) log(s, action, u.name);
 }
 
 /* ---------------- reporting ---------------- */
@@ -167,26 +341,9 @@ export function gameReport(s: State, date: string, gameId?: number) {
   const bidAmt = sum(bids, (b) => b.amount);
   const winAmt = sum(bids, (b) => b.win ?? 0);
   return {
-    bids, bidAmt,
-    wins: bids.filter((b) => b.status === "won"), winAmt,
-    profit: bidAmt - winAmt,
+    bids, bidAmt, wins: bids.filter((b) => b.status === "won"), winAmt, profit: bidAmt - winAmt,
     withdrawals: tx.filter((x) => x.type === "withdraw" && x.status !== "rejected"),
     deposits: tx.filter((x) => x.type === "deposit"),
     manual: tx.filter((x) => x.type === "manual" && x.dir === "cr"),
-  };
-}
-
-/** Payout the platform would owe for each Ank if it were declared the result. */
-export function exposure(s: State, gameId: number, date: string) {
-  const bids = liveBids(s, (b) => b.gameId === gameId && b.date === date);
-  const total = sum(bids, (b) => b.amount);
-  return {
-    total,
-    count: bids.length,
-    rows: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((ank) => {
-      const x = bids.filter((b) => b.ank === ank);
-      const payout = sum(x, (b) => b.amount * b.rate);
-      return { ank, count: x.length, amount: sum(x, (b) => b.amount), payout, pl: total - payout };
-    }),
   };
 }
