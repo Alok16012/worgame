@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowDownToLine, BarChart3, Play, PlusCircle, Send, Star, Trophy } from "lucide-react";
-import { findGame, marketState, resultOf } from "../../lib/engine";
+import { findGame, isOffDay, marketState, resultOf } from "../../lib/engine";
 import { addDays, fmtDate, fmtTime, ymd } from "../../lib/format";
 import { resultText } from "../../lib/matka";
 import { useStore } from "../../lib/store";
@@ -25,6 +25,7 @@ export function MarketCard({ g, nav, now }: { g: Game; nav: Nav; now: Date }) {
   const { state } = useStore();
   const { toast } = useSession();
   const st = marketState(state, g, now);
+  const holiday = isOffDay(g, now);
   const text = resultText(g.cat, resultOf(state, g.id, ymd(now)));
   return (
     <div className="rounded-xl overflow-hidden border border-white/10" style={{ background: "linear-gradient(180deg,#173a8c,#10296b)" }}>
@@ -35,10 +36,11 @@ export function MarketCard({ g, nav, now }: { g: Game; nav: Nav; now: Date }) {
         <button onClick={() => nav.push({ name: "chart", gameId: g.id })} className="w-10 h-10 rounded-lg bg-white/10 grid place-items-center text-[#f5c542]" aria-label="Chart"><BarChart3 size={22} /></button>
         <div className="flex-1 text-center min-w-0">
           <div className="text-[15px] font-bold text-white truncate tracking-wide">{g.name}</div>
-          <div className="gold text-xl font-extrabold tracking-[2px]">{text}</div>
+          {holiday ? <div className="inline-block mt-0.5 px-3 py-0.5 rounded-full bg-[#e11d2e]/90 text-white text-xs font-bold tracking-wider">HOLIDAY TODAY</div>
+            : <div className="gold text-xl font-extrabold tracking-[2px]">{text}</div>}
         </div>
         <button
-          onClick={() => (st.anyOk ? nav.push({ name: "market", gameId: g.id }) : toast("Betting is closed for today", "bad"))}
+          onClick={() => (st.anyOk ? nav.push({ name: "market", gameId: g.id }) : toast(holiday ? `${g.name} is closed today (holiday)` : "Betting is closed for today", "bad"))}
           className={`w-11 h-11 rounded-full grid place-items-center text-white shadow-lg ${st.anyOk ? "bg-[#22c55e]" : "bg-[#e11d2e]"}`} aria-label={st.anyOk ? "Play" : "Closed"}>
           <Play size={20} fill="currentColor" className="ml-0.5" />
         </button>
@@ -64,7 +66,9 @@ export function Home({ nav, openMenu }: { nav: Nav; openMenu: () => void }) {
     return () => window.clearInterval(t);
   }, [s.sliders.length]);
   const b = s.sliders.length ? s.sliders[slide % s.sliders.length] : null;
-  const golden = s.golden.date === ymd(now) ? s.golden.anks : [];
+  const hindi = !!b && /[\u0900-\u097F]/.test(b.title); // Devanagari title, e.g. "शुभ लाभ"
+  const today = ymd(now);
+  const golden = s.golden.from <= today && today <= s.golden.to ? s.golden.anks : [];
 
   return (
     <>
@@ -72,9 +76,11 @@ export function Home({ nav, openMenu }: { nav: Nav; openMenu: () => void }) {
       <div className="marquee overflow-hidden whitespace-nowrap text-[#f5c542] font-semibold text-sm py-1.5 bg-black/20"><span>{s.marquee}</span></div>
       <div className="px-3 pt-3 space-y-3">
         {b && (
-          <div className="relative rounded-xl overflow-hidden min-h-32 px-5 py-5 flex flex-col justify-end border border-[#f5c542]/30" style={{ background: `linear-gradient(135deg,${b.c1},${b.c2})` }}>
-            <div className="text-2xl font-extrabold text-white drop-shadow">{b.title}</div>
-            <div className="text-sm text-white/85">{b.sub}</div>
+          <div className="relative rounded-xl overflow-hidden aspect-[2.2] px-5 py-5 flex flex-col justify-end border border-[#f5c542]/30" style={{ background: b.img ? `center / cover no-repeat url(${b.img})` : `linear-gradient(135deg,${b.c1},${b.c2})` }}>
+            {!b.img && <>
+              <div className={`font-extrabold drop-shadow ${hindi ? "gold text-4xl" : "text-2xl text-white"}`} style={hindi ? { fontFamily: "var(--font-yatra)" } : undefined}>{b.title}{hindi && <span className="ml-2 text-2xl">🪔</span>}</div>
+              <div className="text-sm text-white/85">{b.sub}</div>
+            </>}
             <div className="absolute bottom-3 right-4 flex gap-1">{s.sliders.map((x, i) => <span key={x.id} className={`h-1.5 rounded-full ${i === slide % s.sliders.length ? "w-4 bg-white" : "w-1.5 bg-white/40"}`} />)}</div>
           </div>
         )}

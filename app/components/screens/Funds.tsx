@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Building2, ChevronDown, Code2, Hash, IndianRupee, MapPin, MessageCircle, Pencil, User } from "lucide-react";
-import { deposit, requestWithdraw, updateUser } from "../../lib/engine";
+import { deposit, requestFund, requestWithdraw, updateUser } from "../../lib/engine";
 import { fmtDate, fmtTime } from "../../lib/format";
 import { useStore } from "../../lib/store";
 import { PAY_METHODS, type Bank, type PayMethod } from "../../lib/types";
@@ -38,6 +38,13 @@ export function Deposit({ nav }: { nav: Nav }) {
     setPaying(app.id);
     window.location.href = upiLink(app.scheme, s.upiId, s.appName, amt);
   };
+  const sendRequest = () => {
+    const r = attempt((d) => requestFund(d, user.id, amt));
+    if (!r.ok) return setAlert(r.error);
+    toast("Add Fund request sent. Admin will contact you for payment.");
+    setAmount("");
+  };
+  const mine = state.txns.filter((x) => x.userId === user.id && x.type === "deposit").slice(-5).reverse();
   const confirmPaid = () => {
     const r = attempt((d) => deposit(d, user.id, amt, paying ?? "UPI"));
     setPaying(null);
@@ -60,18 +67,36 @@ export function Deposit({ nav }: { nav: Nav }) {
           <div className="text-xs text-slate-500 mt-1.5">Deposit range: ₹{s.minDeposit} - ₹{s.maxDeposit}</div>
           <div className="flex gap-2 mt-3 flex-wrap">{[500, 1000, 2000, 5000].map((v) => <button key={v} onClick={() => setAmount(String(v))} className="px-3 py-1.5 rounded-full border border-[#13306f]/30 text-[#13306f] text-sm">₹{v}</button>)}</div>
         </div>
-        <div className="ybox p-4">
-          <div className="font-semibold text-slate-800 mb-3">Pay With</div>
-          <div className="grid grid-cols-4 gap-3">
-            {APPS.map((a) => (
-              <button key={a.id} onClick={() => open(a)} className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
-                <span className="w-14 h-14 rounded-2xl grid place-items-center text-lg font-black shadow border border-slate-100" style={{ background: a.bg, color: a.fg }}>{a.mark}</span>
-                <span className="text-[11px] text-slate-600">{a.label}</span>
-              </button>
+        {s.autoUpi ? (
+          <div className="ybox p-4">
+            <div className="font-semibold text-slate-800 mb-3">Pay With</div>
+            <div className="grid grid-cols-4 gap-3">
+              {APPS.map((a) => (
+                <button key={a.id} onClick={() => open(a)} className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
+                  <span className="w-14 h-14 rounded-2xl grid place-items-center text-lg font-black shadow border border-slate-100" style={{ background: a.bg, color: a.fg }}>{a.mark}</span>
+                  <span className="text-[11px] text-slate-600">{a.label}</span>
+                </button>
+              ))}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-3">Tap an app to pay ₹{amt || 0} to {s.upiId}</div>
+          </div>
+        ) : (
+          <div className="ybox p-4">
+            <button className="ybtn w-full py-3 rounded-xl" disabled={!amt} onClick={sendRequest}>Send Add Fund Request</button>
+            <div className="text-xs text-slate-500 mt-2 text-center">Admin will contact you on WhatsApp with payment details. The amount is added after payment is confirmed.</div>
+          </div>
+        )}
+        {mine.length > 0 && (
+          <div className="ybox p-4">
+            <div className="font-semibold text-slate-800 mb-2">My Add Fund Requests</div>
+            {mine.map((x) => (
+              <div key={x.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 text-sm">
+                <div><b>₹{x.amount}</b><div className="text-[11px] text-slate-400">{fmtDate(x.date)} {fmtTime(x.time)} · {x.mode}</div></div>
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded text-white ${x.status === "pending" ? "bg-amber-500" : x.status === "rejected" ? "bg-rose-500" : "bg-emerald-500"}`}>{x.status === "pending" ? "Pending" : x.status === "rejected" ? "Rejected" : "Approved"}</span>
+              </div>
             ))}
           </div>
-          <div className="text-[11px] text-slate-400 mt-3">Tap an app to pay ₹{amt || 0} to {s.upiId}</div>
-        </div>
+        )}
         <a href={whatsappLink(s.contact.whatsapp)} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1.5 text-sm text-slate-600 bg-white rounded-lg py-3">
           For Fund Related Query <MessageCircle size={16} className="text-emerald-600" /> {s.contact.whatsapp}
         </a>
@@ -223,6 +248,8 @@ export function WithdrawHistory({ nav }: { nav: Nav }) {
             <div className="flex justify-between items-center"><span className="text-lg font-bold text-[#13306f]">₹{x.amount}</span><span className={`text-white text-xs font-semibold px-2.5 py-1 rounded capitalize ${color[x.status]}`}>{x.status}</span></div>
             <div className="text-xs text-slate-500 mt-1">{fmtDate(x.date)} {fmtTime(x.time)}</div>
             <div className="text-xs text-slate-600 mt-1">{x.payTo}</div>
+            {x.status === "rejected" && <div className="text-xs font-semibold text-rose-600 mt-1">Rejected by admin · ₹{x.amount} refunded to your wallet</div>}
+            {x.status === "approved" && <div className="text-xs font-semibold text-emerald-600 mt-1">Paid · credited within 12-24 hours</div>}
           </div>
         )) : <div className="text-center text-slate-500 mt-16">No withdraw history</div>}
       </div>

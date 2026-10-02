@@ -77,6 +77,7 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
 
   const tx = s.txns.filter((x) => x.userId === id);
   const deposits = tx.filter((x) => x.type === "deposit").reverse();
+  const approvedDeposits = deposits.filter((x) => x.status === "approved");
   const withdraws = tx.filter((x) => x.type === "withdraw").reverse();
   const bids = s.bids.filter((b) => b.userId === id).reverse();
   const wallet = tx.filter((x) => tab === "all" || x.dir === tab).reverse();
@@ -131,7 +132,7 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
             <div>{info("Email", u.email)}{info("Password", u.password)}{info("Last Login", u.lastLogin ? fmtStamp(u.lastLogin) : "N/A")}</div>
           </div>
           <div className="flex flex-wrap gap-2 mt-4">
-            <span className="px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-[#28a745]">Total Deposit: {sum(deposits, (x) => x.amount)}</span>
+            <span className="px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-[#28a745]">Total Deposit: {sum(approvedDeposits, (x) => x.amount)}</span>
             <span className="px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-[#dc3545]">Total Withdraw: {sum(withdraws.filter((w) => w.status === "approved"), (x) => x.amount)}</span>
             <span className="px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-[#0d6efd]">Total Bid: {sum(live, (b) => b.amount)}</span>
             <span className="px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-[#fd7e14]">Total Winning: {sum(live, (b) => b.win ?? 0)}</span>
@@ -149,14 +150,14 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
 
       <Card className="mt-5" title="Add Fund Request">
         <DataTable head={["Sr No", "Request Amount", "Transaction", "UPI App", "Date", "Time", "Action"]}
-          rows={deposits.map((x, i) => [i + 1, x.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 }), <span key="c" className="text-emerald-600">Credit</span>, x.mode, fmtDate(x.date), fmtTime(x.time), <Badge key="a" tone="green">Approved</Badge>])}
+          rows={deposits.map((x, i) => [i + 1, x.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 }), <span key="c" className="text-emerald-600">Credit</span>, x.mode, fmtDate(x.date), fmtTime(x.time), x.status === "pending" ? <Btn key="a" size="sm" variant="amber" onClick={() => go("fund")}>Pending</Btn> : <Badge key="a" tone={x.status === "rejected" ? "red" : "green"}>{x.status === "rejected" ? "Rejected" : "Approved"}</Badge>])}
           text={deposits.map((x) => `${x.amount} ${x.date}`)} />
       </Card>
 
       <Card className="mt-5" title="Withdraw Request">
         <DataTable head={["Sr No", "Request Amount", "Pay To", "Date", "Time", "Action"]}
           rows={withdraws.map((x, i) => [i + 1, x.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 }), x.payTo, fmtDate(x.date), fmtTime(x.time),
-            x.status === "pending" ? <Btn key="p" size="sm" variant="amber" onClick={() => go("withdraw")}>Pending</Btn> : <Badge key="s" tone={x.status === "approved" ? "green" : "red"}>{x.status === "approved" ? "Approved" : "Rejected"}</Badge>])}
+            x.status === "pending" ? <Btn key="p" size="sm" variant="amber" onClick={() => go("withdraw")}>Pending</Btn> : <Badge key="s" tone={x.status === "approved" ? "green" : "red"}>{x.status === "approved" ? "Approved" : "Rejected · Refunded"}</Badge>])}
           text={withdraws.map((x) => `${x.amount} ${x.date}`)} />
       </Card>
 

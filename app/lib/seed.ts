@@ -6,7 +6,7 @@ import { MODULES, type Cat, type GameType, type Session, type State, type User }
 // Demo data modelled on the live panel: the same market names and timings, 30 players and
 // 7 days of bids, results, deposits and withdrawals. Seeded RNG, dates relative to today.
 
-export const STATE_VERSION = 3;
+export const STATE_VERSION = 4;
 
 function mulberry32(a: number) {
   return () => {
@@ -58,14 +58,14 @@ export function seedState(): State {
       marquee: "WELCOME TO SHRI KALYAN • फ्रॉड ऐप से सावधान • Play only on the official app",
       website: "",
       minDeposit: 1, maxDeposit: 100000, minWithdraw: 1000, maxWithdraw: 200000, minBid: 5, maxBid: 10000, welcomeBonus: 10,
-      upiId: "shrikalyan@upi", demoMode: true, maintenance: false, version: "1.0.0",
+      upiId: "shrikalyan@upi", autoUpi: true, demoMode: true, maintenance: false, version: "1.0.0",
       contact: { whatsapp: "+91 98765 43210", phone: "+91 98765 43210", email: "support@shrikalyan.app", telegram: "@shrikalyan_official" },
       howToPlay:
         "1. Deposit money in your wallet from Deposit Fund.\n2. Tap Play on any market that is open.\n3. Choose a game type: Single Ank, Jodi, Single/Double/Triple Pana, Half or Full Sangam.\n4. Choose OPEN or CLOSE session, type your amount on the numbers you want and tap Submit Bids.\n5. Results are declared at the market's OPEN and CLOSE time, e.g. 123-65-456.\n6. Winning amount (bid × rate) is added to your wallet automatically. Withdraw to your bank in withdraw time.",
       video: "https://youtube.com/",
       sliders: [],
       withdraw: { days: [0, 1, 2, 3, 4, 5, 6], from: "00:00", to: "23:59" },
-      golden: { date: today, anks: [3, 7] },
+      golden: { from: today, to: addDays(1), anks: [3, 7] },
       rates: {
         main: {
           single_ank: { bet: 10, win: 100 }, jodi: { bet: 10, win: 950 }, single_pana: { bet: 10, win: 1500 }, double_pana: { bet: 10, win: 3000 },
@@ -91,12 +91,14 @@ export function seedState(): State {
     s.txns.push({ id: nid(s), userId: u.id, type: "bonus", dir: "cr", amount: 10, date: u.joined.slice(0, 10), time: u.joined.slice(11), status: "success", remark: "Welcome Bonus" });
   });
 
-  for (const [name, open, close] of MARKETS) s.games.push({ id: nid(s), cat: "main", name, open, close, active: true });
+  // Weekly holidays, like the live markets: Mein Bazar / Milan Night shut Sat + Sun, Kalyan shuts Sunday.
+  const OFF: Record<string, number[]> = { "MEIN BAZAR": [0, 6], "MILAN NIGHT": [0, 6], "MILAN DAY": [0], KALYAN: [0], "KALYAN NIGHT": [0, 6], "RAJDHANI NIGHT": [0, 6], "RAJDHANI DAY": [0] };
+  for (const [name, open, close] of MARKETS) s.games.push({ id: nid(s), cat: "main", name, open, close, active: true, offDays: OFF[name] ?? [] });
   for (const t of STARLINE) {
     const h = Number(t.slice(0, 2));
-    s.games.push({ id: nid(s), cat: "starline", name: `${h % 12 || 12}:00 ${h >= 12 ? "PM" : "AM"}`, open: t, close: t, active: true });
+    s.games.push({ id: nid(s), cat: "starline", name: `${h % 12 || 12}:00 ${h >= 12 ? "PM" : "AM"}`, open: t, close: t, active: true, offDays: [] });
   }
-  for (const [name, close] of GALI) s.games.push({ id: nid(s), cat: "gali", name, open: close, close, active: true });
+  for (const [name, close] of GALI) s.games.push({ id: nid(s), cat: "gali", name, open: close, close, active: true, offDays: [] });
 
   const players = s.users.filter((u) => u.status === "active" && u.betting);
   const anyPana = () => pick([...SINGLE_PANA, ...SINGLE_PANA, ...DOUBLE_PANA, ...TRIPLE_PANA]);
@@ -114,7 +116,9 @@ export function seedState(): State {
 
   for (let d = -6; d <= 0; d++) {
     const date = addDays(d);
+    const weekday = new Date(`${date}T12:00:00`).getDay();
     for (const g of s.games) {
+      if (g.offDays.includes(weekday)) continue; // market holiday: no bids, no result
       const n = g.cat === "main" ? rnd(3, 9) : rnd(2, 5);
       for (let i = 0; i < n; i++) {
         const u = pick(players);
@@ -154,6 +158,10 @@ export function seedState(): State {
     });
   }
   for (let i = 0; i < 3; i++) {
+    const u = pick(players.slice(1));
+    s.txns.push({ id: nid(s), userId: u.id, type: "deposit", dir: "cr", amount: pick([500, 1000, 2000]), date: today, time: t2(9, 12), status: "pending", remark: "Add fund request", mode: "Manual" });
+  }
+  for (let i = 0; i < 3; i++) {
     const u = pick(players);
     s.txns.push({ id: nid(s), userId: u.id, type: "manual", dir: "cr", amount: pick([500, 1000]), date: addDays(-rnd(0, 4)), time: "12:30", status: "success", remark: "Amount added by admin", mode: "Admin" });
   }
@@ -174,6 +182,7 @@ export function seedState(): State {
   s.notices = [{ id: nid(s), title: "Welcome to Shri Kalyan", msg: "Play only on the official app. Withdrawals are processed within 12-24 hours.", target: "All Users", date: addDays(-3), time: "10:00" }];
   s.pushes = [];
   s.settings.sliders = [
+    { id: nid(s), title: "शुभ लाभ", sub: "Shri Kalyan • Fast results • Instant withdrawal", c1: "#7a1212", c2: "#c2410c" },
     { id: nid(s), title: "Shri Kalyan Matka", sub: "Fast results • Instant withdrawal", c1: "#1f45a8", c2: "#7a1d3a" },
     { id: nid(s), title: "Starline every hour", sub: "12 results daily from 10 AM", c1: "#0e1433", c2: "#5b3df5" },
   ];

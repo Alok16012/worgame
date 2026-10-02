@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { log, nid, withdrawOpen } from "../../lib/engine";
-import { DAYS, ymd } from "../../lib/format";
+import { DAYS, fmtDate, ymd } from "../../lib/format";
 import { useStore } from "../../lib/store";
 import type { Settings } from "../../lib/types";
 import { Btn, Card, Field, useAdmin } from "../ui";
+import { imageToBanner } from "../common";
 
 function useSettingsForm<K extends keyof Settings>(keys: K[]) {
   const { state: s, update } = useStore();
@@ -33,7 +34,7 @@ function Switch({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
 type NumKey = "minDeposit" | "maxDeposit" | "minWithdraw" | "maxWithdraw" | "minBid" | "maxBid" | "welcomeBonus";
 
 export function MainSetting() {
-  const { f, setF, save } = useSettingsForm(["appName", "marquee", "website", "upiId", "version", "minDeposit", "maxDeposit", "minWithdraw", "maxWithdraw", "minBid", "maxBid", "welcomeBonus", "demoMode", "maintenance"]);
+  const { f, setF, save } = useSettingsForm(["appName", "marquee", "website", "upiId", "version", "minDeposit", "maxDeposit", "minWithdraw", "maxWithdraw", "minBid", "maxBid", "welcomeBonus", "autoUpi", "demoMode", "maintenance"]);
   const num = (k: NumKey, label: string) => <Field label={label}><input className="admin-input" inputMode="numeric" value={f[k]} onChange={(e) => setF({ ...f, [k]: Number(e.target.value.replace(/\D/g, "")) })} /></Field>;
   const text = (k: "appName" | "marquee" | "website" | "upiId" | "version", label: string) => <Field label={label}><input className="admin-input" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></Field>;
   return (
@@ -53,6 +54,7 @@ export function MainSetting() {
         {num("maxBid", "Max Bid Amount")}
       </div>
       <div className="grid md:grid-cols-2 gap-3 mt-5">
+        <Switch on={f.autoUpi} onChange={(v) => setF({ ...f, autoUpi: v })} label="Auto UPI Payment" hint="ON: Add Fund opens PhonePe / Google Pay / Paytm and credits the wallet. OFF: players send an Add Fund request that you approve in Fund Management." />
         <Switch on={f.demoMode} onChange={(v) => setF({ ...f, demoMode: v })} label="Demo mode" hint="Ignore the withdraw time window. Market OPEN/CLOSE timings always apply." />
         <Switch on={f.maintenance} onChange={(v) => setF({ ...f, maintenance: v })} label="Maintenance mode" hint="Player app shows 'under maintenance'." />
       </div>
@@ -90,29 +92,51 @@ export function HowToPlaySetting() {
 export function SliderImages() {
   const { state: s, update } = useStore();
   const { toast } = useAdmin();
-  const [f, setF] = useState({ title: "", sub: "", c1: "#f5a623", c2: "#c2410c" });
+  const [f, setF] = useState({ title: "", sub: "", c1: "#7a1212", c2: "#c2410c" });
+  const [img, setImg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const pick = async (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast("Choose an image file", "bad");
+    setBusy(true);
+    try { setImg(await imageToBanner(file)); } catch { toast("Could not read this image", "bad"); }
+    setBusy(false);
+  };
+  const add = () => {
+    if (!img && !f.title.trim()) return toast("Choose an image or enter a title", "bad");
+    update((d) => { d.settings.sliders.push({ id: nid(d), ...f, title: f.title.trim(), ...(img ? { img } : {}) }); log(d, "Slider Image", img ? "image uploaded" : f.title.trim()); });
+    setF({ ...f, title: "", sub: "" });
+    setImg(null);
+    toast("Slider added", "ok");
+  };
+
   return (
     <>
       <Card title="Slider Image">
         <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {s.settings.sliders.map((b) => (
-            <div key={b.id} className="relative rounded-xl p-5 min-h-32 text-white flex flex-col justify-end" style={{ background: `linear-gradient(135deg,${b.c1},${b.c2})` }}>
-              <div className="font-bold text-lg">{b.title}</div><div className="text-sm opacity-85">{b.sub}</div>
-              <button onClick={() => update((d) => { d.settings.sliders = d.settings.sliders.filter((x) => x.id !== b.id); })} className="absolute top-3 right-3 p-1.5 rounded bg-black/30" aria-label="Delete"><Trash2 size={14} /></button>
+            <div key={b.id} className="relative rounded-xl overflow-hidden aspect-[2.2] text-white flex flex-col justify-end p-4" style={{ background: b.img ? `center / cover no-repeat url(${b.img})` : `linear-gradient(135deg,${b.c1},${b.c2})` }}>
+              {!b.img && <><div className="font-bold text-lg">{b.title}</div><div className="text-sm opacity-85">{b.sub}</div></>}
+              <button onClick={() => update((d) => { d.settings.sliders = d.settings.sliders.filter((x) => x.id !== b.id); })} className="absolute top-3 right-3 p-1.5 rounded bg-black/40" aria-label="Delete"><Trash2 size={14} /></button>
             </div>
           ))}
           {!s.settings.sliders.length && <div className="text-sm text-slate-400">No slider images.</div>}
         </div>
       </Card>
       <Card className="mt-5" title="Upload Image">
-        <p className="text-xs text-slate-500 mb-3">The live app uploads a banner image. This demo creates a gradient banner with your text.</p>
-        <div className="grid md:grid-cols-[2fr_2fr_auto_auto_auto] gap-4 items-end">
-          <Field label="Title"><input className="admin-input" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></Field>
+        <p className="text-xs text-slate-500 mb-3">Upload a banner photo (e.g. Lakshmi-Ganesh ji, शुभ लाभ). Wide images look best (about 2:1). Or leave the image empty to make a colour banner with text.</p>
+        <div className="grid md:grid-cols-[1.4fr_2fr_2fr_auto_auto] gap-4 items-end">
+          <Field label="Image">
+            <input type="file" accept="image/*" className="admin-input !py-1.5" onChange={(e) => pick(e.target.files?.[0])} />
+          </Field>
+          <Field label="Title (optional with image)"><input className="admin-input" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></Field>
           <Field label="Sub Title"><input className="admin-input" value={f.sub} onChange={(e) => setF({ ...f, sub: e.target.value })} /></Field>
           <Field label="Color 1"><input type="color" className="h-10 w-16 rounded border border-slate-200" value={f.c1} onChange={(e) => setF({ ...f, c1: e.target.value })} /></Field>
           <Field label="Color 2"><input type="color" className="h-10 w-16 rounded border border-slate-200" value={f.c2} onChange={(e) => setF({ ...f, c2: e.target.value })} /></Field>
-          <Btn onClick={() => { if (!f.title.trim()) return toast("Title is required", "bad"); update((d) => { d.settings.sliders.push({ id: nid(d), ...f, title: f.title.trim() }); }); setF({ ...f, title: "", sub: "" }); toast("Slider added", "ok"); }}>Upload</Btn>
         </div>
+        {img && <img src={img} alt="Preview" className="mt-4 rounded-xl max-h-48 border border-slate-200" />}
+        <Btn className="mt-4" disabled={busy} onClick={add}>{busy ? "Reading image…" : "Upload"}</Btn>
       </Card>
     </>
   );
@@ -143,9 +167,14 @@ export function WithdrawDays() {
 export function GoldenAnk() {
   const { f, setF, save } = useSettingsForm(["golden"]);
   const g = f.golden;
+  const today = ymd();
+  const live = g.from <= today && today <= g.to;
   return (
     <Card title="Golden Ank">
-      <Field label="Date" className="max-w-xs"><input type="date" className="admin-input" value={g.date} onChange={(e) => setF({ golden: { ...g, date: e.target.value } })} /></Field>
+      <div className="grid sm:grid-cols-2 gap-4 max-w-lg">
+        <Field label="From Date"><input type="date" className="admin-input" value={g.from} onChange={(e) => setF({ golden: { ...g, from: e.target.value, to: g.to < e.target.value ? e.target.value : g.to } })} /></Field>
+        <Field label="To Date"><input type="date" className="admin-input" value={g.to} min={g.from} onChange={(e) => setF({ golden: { ...g, to: e.target.value } })} /></Field>
+      </div>
       <div className="text-[13px] text-slate-600 mt-4 mb-2">Golden Ank (max 4)</div>
       <div className="flex flex-wrap gap-2">
         {Array.from({ length: 10 }, (_, a) => {
@@ -153,8 +182,8 @@ export function GoldenAnk() {
           return <button key={a} onClick={() => setF({ golden: { ...g, anks: on ? g.anks.filter((x) => x !== a) : g.anks.length < 4 ? [...g.anks, a].sort() : g.anks } })} className={`w-11 h-11 rounded border text-lg font-semibold ${on ? "bg-[#f5b301] border-[#f5b301] text-white" : "border-slate-300"}`}>{a}</button>;
         })}
       </div>
-      <Btn className="mt-5" onClick={() => save("Golden Ank")}>Update</Btn>
-      {g.date !== ymd() && <p className="text-xs text-amber-600 mt-2">Shown in the app only on {g.date}.</p>}
+      <Btn className="mt-5" onClick={() => save("Golden Ank", (v) => (v.golden.to < v.golden.from ? "To date must be on or after From date" : null))}>Update</Btn>
+      <p className={`text-xs mt-2 ${live ? "text-emerald-600" : "text-amber-600"}`}>{live ? "Showing in the app now" : "Not showing today"} · {fmtDate(g.from)} to {fmtDate(g.to)}</p>
     </Card>
   );
 }

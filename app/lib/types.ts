@@ -53,6 +53,8 @@ export interface Game {
   open: string; // HH:MM
   close: string; // HH:MM
   active: boolean;
+  /** Days (0 = Sunday … 6 = Saturday) the market stays closed, e.g. Mein Bazar on Sat + Sun. */
+  offDays: number[];
 }
 
 export type BidStatus = "pending" | "won" | "lost" | "reverted";
@@ -111,7 +113,8 @@ export interface Push { id: number; title: string; msg: string; target: string; 
 export interface Role { id: number; name: string; perms: string[] }
 export interface AdminUser { id: number; name: string; username: string; role: string; active: boolean }
 export interface Audit { id: number; at: string; by: string; action: string; detail: string }
-export interface Slider { id: number; title: string; sub: string; c1: string; c2: string }
+/** Home banner: an uploaded image (`img`, data URL) or a gradient with text. */
+export interface Slider { id: number; title: string; sub: string; c1: string; c2: string; img?: string }
 
 /** Payout written the way the panel shows it: bet `bet` → win `win`. */
 export interface Rate { bet: number; win: number }
@@ -133,6 +136,8 @@ export interface Settings {
   maxBid: number;
   welcomeBonus: number;
   upiId: string;
+  /** ON: Add Fund opens the UPI app and credits automatically. OFF: Add Fund sends a request the admin approves. */
+  autoUpi: boolean;
   demoMode: boolean; // ignore the withdraw time window (market timings always apply)
   maintenance: boolean;
   version: string;
@@ -141,7 +146,8 @@ export interface Settings {
   video: string;
   sliders: Slider[];
   withdraw: { days: number[]; from: string; to: string };
-  golden: { date: string; anks: number[] };
+  /** Golden Ank shown on the home screen from `from` to `to` (inclusive). */
+  golden: { from: string; to: string; anks: number[] };
   rates: Record<Cat, Partial<Record<GameType, Rate>>>;
 }
 

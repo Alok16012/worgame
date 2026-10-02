@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { log, nid } from "../../lib/engine";
-import { fmtTime } from "../../lib/format";
+import { DAYS, fmtTime } from "../../lib/format";
 import { DIGITS, DOUBLE_PANA, JODIS, SINGLE_PANA, TRIPLE_PANA } from "../../lib/matka";
 import { useStore } from "../../lib/store";
 import { CAT_LABEL, CAT_TYPES, TYPE_LABEL, type Cat, type Game, type GameType, type Rate } from "../../lib/types";
@@ -13,7 +13,7 @@ export function GameNames({ cat }: { cat: Cat }) {
   const { state: s, update } = useStore();
   const { toast } = useAdmin();
   const two = cat === "main";
-  const blank = { id: 0, cat, name: "", open: "10:00", close: "11:00", active: true } as Game;
+  const blank: Game = { id: 0, cat, name: "", open: "10:00", close: "11:00", active: true, offDays: [] };
   const [edit, setEdit] = useState<Game | null>(null);
   const games = s.games.filter((g) => g.cat === cat);
 
@@ -35,10 +35,11 @@ export function GameNames({ cat }: { cat: Cat }) {
 
   return (
     <Card title={`${cat === "main" ? "" : CAT_LABEL[cat] + " "}Game Name`} right={<Btn variant="dark" onClick={() => setEdit(blank)}>+ Add Game</Btn>}>
-      <DataTable head={["Sr No", "Game Name", ...(two ? ["Open Time", "Close Time"] : ["Result Time"]), "Active", "Action"]}
+      <DataTable head={["Sr No", "Game Name", ...(two ? ["Open Time", "Close Time"] : ["Result Time"]), "Market Off Days", "Active", "Action"]}
         rows={games.map((g, i) => [i + 1, <b key="n">{g.name}</b>, ...(two ? [fmtTime(g.open), fmtTime(g.close)] : [fmtTime(g.close)]),
+          g.offDays?.length ? <span key="o" className="text-rose-600 font-medium">{g.offDays.map((d) => DAYS[d]).join(", ")}</span> : <span key="o" className="text-slate-400">Open all days</span>,
           <YesNo key="a" on={g.active} onChange={() => update((d) => { const x = d.games.find((y) => y.id === g.id)!; x.active = !x.active; log(d, "Game Status", `${x.name} → ${x.active ? "active" : "inactive"}`); })} />,
-          <button key="e" className="p-1.5 text-slate-600 hover:text-[#0d6efd]" onClick={() => setEdit({ ...g })} aria-label="Edit"><Pencil size={15} /></button>])}
+          <button key="e" className="p-1.5 text-slate-600 hover:text-[#0d6efd]" onClick={() => setEdit({ ...g, offDays: g.offDays ?? [] })} aria-label="Edit"><Pencil size={15} /></button>])}
         text={games.map((g) => g.name)} />
       {edit && (
         <Modal title={edit.id ? "Edit Game" : "Add Game"} onClose={() => setEdit(null)} footer={<><Btn variant="ghost" onClick={() => setEdit(null)}>Close</Btn><Btn onClick={save}>Submit</Btn></>}>
@@ -46,6 +47,16 @@ export function GameNames({ cat }: { cat: Cat }) {
             <Field label="Game Name"><input className="admin-input uppercase" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
             {two && <Field label="Open Time"><input type="time" className="admin-input" value={edit.open} onChange={(e) => setEdit({ ...edit, open: e.target.value })} /></Field>}
             <Field label={two ? "Close Time" : "Result Time"}><input type="time" className="admin-input" value={edit.close} onChange={(e) => setEdit({ ...edit, close: e.target.value })} /></Field>
+            <div>
+              <div className="text-[13px] text-slate-600 mb-1.5">Market Off Days (closed on)</div>
+              <div className="flex flex-wrap gap-1.5">
+                {DAYS.map((d, i) => {
+                  const on = edit.offDays.includes(i);
+                  return <label key={d} className={`flex items-center gap-1.5 border rounded px-2.5 py-1.5 text-sm cursor-pointer ${on ? "border-rose-300 bg-rose-50 text-rose-700" : "border-slate-200"}`}><input type="checkbox" checked={on} onChange={() => setEdit({ ...edit, offDays: on ? edit.offDays.filter((x) => x !== i) : [...edit.offDays, i].sort() })} />{d}</label>;
+                })}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">On these days the market shows Holiday in the app and no bids are taken.</div>
+            </div>
           </div>
         </Modal>
       )}

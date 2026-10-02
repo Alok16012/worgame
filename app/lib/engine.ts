@@ -39,13 +39,16 @@ export interface MarketState { openOk: boolean; closeOk: boolean; anyOk: boolean
 const CLOSED: MarketState = { openOk: false, closeOk: false, anyOk: false, types: [] };
 const CLOSE_TYPES: GameType[] = ["single_ank", "single_pana", "double_pana", "triple_pana"];
 
+/** Market holiday (e.g. Mein Bazar on Saturday and Sunday). */
+export const isOffDay = (g: Game, now = new Date()) => (g.offDays ?? []).includes(now.getDay());
+
 /**
  * Which sessions accept bids right now. Main: open session until the open time (or open result),
  * close session until the close time (or close result); after the open session only close-session
  * Single Ank / Pana bids are possible. Timings always apply, also in demo mode.
  */
 export function marketState(s: State, g: Game, now = new Date()): MarketState {
-  if (!g.active) return CLOSED;
+  if (!g.active || isOffDay(g, now)) return CLOSED;
   const r = resultOf(s, g.id, ymd(now));
   const t = now.getHours() * 60 + now.getMinutes();
   if (g.cat === "main") {
@@ -244,12 +247,40 @@ export function revertBids(s: State, gameId: number, date: string, onlyId?: numb
 
 /* ---------------- wallet ---------------- */
 
-export function deposit(s: State, userId: number, amount: number, app: string) {
-  const u = findUser(s, userId) ?? fail("User not found");
+function checkDeposit(s: State, amount: number) {
   const { minDeposit: lo, maxDeposit: hi } = s.settings;
   if (!Number.isInteger(amount) || amount < lo || amount > hi) fail(`Deposit range is ${inr(lo)} - ${inr(hi)}`);
+}
+
+/** Auto UPI (setting ON): the payment is confirmed, credit straight away. */
+export function deposit(s: State, userId: number, amount: number, app: string) {
+  const u = findUser(s, userId) ?? fail("User not found");
+  checkDeposit(s, amount);
   u.balance += amount;
   addTxn(s, userId, "deposit", "cr", amount, "Deposit Fund", { mode: app, utr: "UTR" + Math.floor(1e11 + Math.random() * 9e11), status: "approved" });
+}
+
+/** Manual mode (setting OFF): the player raises an Add Fund request; nothing is credited until the admin approves. */
+export function requestFund(s: State, userId: number, amount: number) {
+  findUser(s, userId) ?? fail("User not found");
+  checkDeposit(s, amount);
+  if (s.txns.some((x) => x.userId === userId && x.type === "deposit" && x.status === "pending")) fail("You already have a pending Add Fund request");
+  addTxn(s, userId, "deposit", "cr", amount, "Add fund request", { mode: "Manual", status: "pending" });
+}
+
+export function decideFund(s: State, txnId: number, status: "approved" | "rejected") {
+  const t = s.txns.find((x) => x.id === txnId && x.type === "deposit") ?? fail("Request not found");
+  if (t.status !== "pending") fail("Request already processed");
+  const u = findUser(s, t.userId)!;
+  t.status = status;
+  if (status === "approved") {
+    u.balance += t.amount;
+    t.remark = "Add fund request approved";
+  } else t.remark = "Add fund request rejected";
+  const now = nowAt();
+  t.date = now.date;
+  t.time = now.time;
+  log(s, `Add Fund ${status}`, `${u.name} ${inr(t.amount)}`);
 }
 
 const METHOD_FIELD = { PhonePe: "phonepe", "Google Pay": "gpay", Paytm: "paytm", "UPI ID": "upi" } as const;
@@ -277,7 +308,8 @@ export function decideWithdraw(s: State, txnId: number, status: "approved" | "re
   t.status = status;
   if (status === "rejected") {
     u.balance += t.amount;
-    t.remark = "Withdraw request rejected — amount refunded";
+    t.remark = "Withdraw request rejected";
+    addTxn(s, t.userId, "refund", "cr", t.amount, `Withdraw rejected — ₹${t.amount} refunded to wallet`);
   } else t.remark = "Withdraw request approved";
   log(s, `Withdraw ${status}`, `${u.name} ${inr(t.amount)} → ${t.payTo}`);
 }
@@ -339,7 +371,7 @@ export function gameReport(s: State, date: string, gameId?: number) {
   return {
     bids, bidAmt, wins: bids.filter((b) => b.status === "won"), winAmt, profit: bidAmt - winAmt,
     withdrawals: tx.filter((x) => x.type === "withdraw" && x.status !== "rejected"),
-    deposits: tx.filter((x) => x.type === "deposit"),
+    deposits: tx.filter((x) => x.type === "deposit" && x.status === "approved"),
     manual: tx.filter((x) => x.type === "manual" && x.dir === "cr"),
   };
 }

@@ -34,15 +34,21 @@ Declare Result → Date + Game + Session → **Go** → type the Pana (the Ank f
 
 Market ▶ → Select Betting Type → Date + Choose Session (Open/Close) → amount on each number (Sangam: add rows) → **SUBMIT GAME** → review screen (Digit / Amount with delete, Total Bet, Wallet Balance Before / After Deduction, "Bets once placed cannot be cancelled") → **Submit Bet**. Not enough balance shows "Error! Something Went Wrong! Insufficient Balance".
 
-**Add Fund:** enter amount → tap PhonePe / Google Pay / Paytm / Other UPI → the app opens with the merchant UPI ID (Admin → Main Setting) and amount prefilled. In the demo the player taps "I have paid" to credit the wallet; the live app credits it from the payment gateway callback.
+**Add Fund** depends on Admin → Main Setting → **Auto UPI Payment**:
+- **ON:** enter amount → tap PhonePe / Google Pay / Paytm / Other UPI → the app opens with the merchant UPI ID and amount prefilled. In the demo the player taps "I have paid"; the live app credits it from the payment gateway callback.
+- **OFF:** the player taps **Send Add Fund Request**. It shows in Admin → Fund Management → Add Fund Request with a WhatsApp link. The admin collects the payment and taps **Approve** (wallet credited) or **Reject**.
 
-**Withdraw Fund:** choose method (PhonePe, Google Pay, Paytm, UPI ID) → number / UPI ID → amount → Withdraw Now. Alerts: "Minimum Amount is 1000", "You don't have enough fund!".
+**Withdraw Fund:** choose method (PhonePe, Google Pay, Paytm, UPI ID) → number / UPI ID → amount → Withdraw Now. Alerts: "Minimum Amount is 1000", "You don't have enough fund!". The amount is held from the wallet. In Admin → Withdraw Management (All tab) each request shows Approve / Reject while pending, and afterwards stays in the list as **Approved** or **Rejected · Refunded**. A reject puts the money back in the wallet and adds a "Withdraw rejected — refunded" entry to the player's statement and withdraw history.
+
+**Market off days:** Admin → Game Name → edit → tick the days a market is closed (e.g. Mein Bazar Sat + Sun). On those days the card shows HOLIDAY TODAY and no bids are taken.
+
+**Golden Ank** has a From / To date (e.g. two days). **Slider Image** accepts real photos (e.g. Lakshmi-Ganesh ji banner); uploads are resized to keep the demo storage small.
 
 ## Demo notes
 
 - All data is sample data from `app/lib/seed.ts`, saved in the browser's localStorage. Player app and admin share it **live across tabs**: bid in one tab, declare in the other, and the wallet updates. Use **Reset** in the admin header to reseed.
 - Player demo login: **9876543210 / 123456** (tap the hint on the login screen). Admin login accepts any password.
-- **Demo mode** (Admin → Main Setting) keeps a session open until its result is declared, so you can play at any hour. Turn it off to enforce the real OPEN/CLOSE times.
+- Market OPEN/CLOSE timings always apply: bids close at a market's time even if the result is not declared yet. **Demo mode** (Admin → Main Setting) only skips the withdraw time window.
 - Add Fund opens the real UPI app on a phone; set the real merchant UPI ID in Admin → Main Setting before demoing payments. The wallet is credited when the player taps "I have paid" (demo).
 
 ## Run locally
