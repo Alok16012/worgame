@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDownToLine, BarChart3, Play, PlusCircle, Send, Star, Trophy } from "lucide-react";
+import { ArrowDownToLine, BarChart3, Play, PlusCircle, Send, Star } from "lucide-react";
 import { findGame, isOffDay, marketState, resultOf } from "../../lib/engine";
 import { addDays, fmtDate, fmtTime, ymd } from "../../lib/format";
 import { resultText } from "../../lib/matka";
@@ -67,8 +67,6 @@ export function Home({ nav, openMenu }: { nav: Nav; openMenu: () => void }) {
   }, [s.sliders.length]);
   const b = s.sliders.length ? s.sliders[slide % s.sliders.length] : null;
   const hindi = !!b && /[\u0900-\u097F]/.test(b.title); // Devanagari title, e.g. "शुभ लाभ"
-  const today = ymd(now);
-  const golden = s.golden.from <= today && today <= s.golden.to ? s.golden.anks : [];
 
   return (
     <>
@@ -92,12 +90,6 @@ export function Home({ nav, openMenu }: { nav: Nav; openMenu: () => void }) {
           <Pill icon={<Star size={15} />} label="Starline" onClick={() => nav.push({ name: "list", cat: "starline" })} />
           <Pill icon={<Send size={14} />} label="Telegram" href={`https://t.me/${s.contact.telegram.replace("@", "")}`} />
         </div>
-        {golden.length > 0 && (
-          <div className="rounded-xl px-4 py-2.5 flex items-center gap-3 bg-white/10 border border-[#f5c542]/30">
-            <Trophy size={18} className="text-[#f5c542]" /><span className="font-semibold text-white">Golden Ank</span>
-            {golden.map((a) => <span key={a} className="gbtn w-8 h-8 rounded-full grid place-items-center">{a}</span>)}
-          </div>
-        )}
         {state.games.filter((g) => g.cat === "main" && g.active).map((g) => <MarketCard key={g.id} g={g} nav={nav} now={now} />)}
       </div>
     </>

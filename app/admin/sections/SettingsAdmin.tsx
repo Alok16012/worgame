@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { log, nid, withdrawOpen } from "../../lib/engine";
-import { DAYS, fmtDate, ymd } from "../../lib/format";
+import { DAYS } from "../../lib/format";
 import { useStore } from "../../lib/store";
 import type { Settings } from "../../lib/types";
 import { Btn, Card, Field, useAdmin } from "../ui";
@@ -160,30 +160,6 @@ export function WithdrawDays() {
       </div>
       <Btn className="mt-5" onClick={() => save("Withdraw Day Option", (v) => (v.withdraw.from >= v.withdraw.to ? "Close time must be after open time" : null))}>Update</Btn>
       <p className="text-sm text-slate-500 mt-4">Withdraw is currently <b>{withdrawOpen(s) ? "open" : "closed"}</b> for players{s.settings.demoMode ? " (time window ignored in demo mode)" : ""}.</p>
-    </Card>
-  );
-}
-
-export function GoldenAnk() {
-  const { f, setF, save } = useSettingsForm(["golden"]);
-  const g = f.golden;
-  const today = ymd();
-  const live = g.from <= today && today <= g.to;
-  return (
-    <Card title="Golden Ank">
-      <div className="grid sm:grid-cols-2 gap-4 max-w-lg">
-        <Field label="From Date"><input type="date" className="admin-input" value={g.from} onChange={(e) => setF({ golden: { ...g, from: e.target.value, to: g.to < e.target.value ? e.target.value : g.to } })} /></Field>
-        <Field label="To Date"><input type="date" className="admin-input" value={g.to} min={g.from} onChange={(e) => setF({ golden: { ...g, to: e.target.value } })} /></Field>
-      </div>
-      <div className="text-[13px] text-slate-600 mt-4 mb-2">Golden Ank (max 4)</div>
-      <div className="flex flex-wrap gap-2">
-        {Array.from({ length: 10 }, (_, a) => {
-          const on = g.anks.includes(a);
-          return <button key={a} onClick={() => setF({ golden: { ...g, anks: on ? g.anks.filter((x) => x !== a) : g.anks.length < 4 ? [...g.anks, a].sort() : g.anks } })} className={`w-11 h-11 rounded border text-lg font-semibold ${on ? "bg-[#f5b301] border-[#f5b301] text-white" : "border-slate-300"}`}>{a}</button>;
-        })}
-      </div>
-      <Btn className="mt-5" onClick={() => save("Golden Ank", (v) => (v.golden.to < v.golden.from ? "To date must be on or after From date" : null))}>Update</Btn>
-      <p className={`text-xs mt-2 ${live ? "text-emerald-600" : "text-amber-600"}`}>{live ? "Showing in the app now" : "Not showing today"} · {fmtDate(g.from)} to {fmtDate(g.to)}</p>
     </Card>
   );
 }

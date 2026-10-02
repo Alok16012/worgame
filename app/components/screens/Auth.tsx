@@ -15,7 +15,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
   }, [onDone]);
   return (
     <div className="min-h-dvh grid place-items-center page-blue">
-      <div className="pop"><Logo size={52} boxed /><div className="text-center text-white/70 text-sm mt-5 tracking-wide">Matka • Starline • Gali Desawar</div></div>
+      <div className="pop"><Logo size={52} boxed /></div>
     </div>
   );
 }

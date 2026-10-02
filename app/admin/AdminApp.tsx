@@ -14,7 +14,7 @@ import { BidRevert } from "./sections/Revert";
 import { GameNames, GameNumbers, GameRates } from "./sections/Games";
 import { BidHistory, CustomerSell } from "./sections/Reports";
 import { PushNotification, SendNotice } from "./sections/Notices";
-import { ContactSetting, GoldenAnk, HowToPlaySetting, MainSetting, SliderImages, WithdrawDays } from "./sections/SettingsAdmin";
+import { ContactSetting, HowToPlaySetting, MainSetting, SliderImages, WithdrawDays } from "./sections/SettingsAdmin";
 
 // Admin panel modelled on the live Sara777 panel: same menu tree, page names and flows.
 // Routes live in the URL hash (#declare/starline, #users/1001) so refresh keeps your place.
@@ -38,7 +38,7 @@ const NAV: Item[] = [
   { id: "prediction", label: "Prediction", icon: <BarChart3 size={18} /> },
   { group: "Management", icon: <Users size={18} />, items: [{ id: "roles", label: "Role" }, { id: "users", label: "Users" }] },
   { group: "Wallet Management", icon: <Wallet size={18} />, items: [{ id: "fund", label: "Fund Management" }, { id: "withdraw", label: "Withdraw Management" }, { id: "autodeposit", label: "Auto Deposit History" }, { id: "revert/main", label: "Bid Revert" }] },
-  { group: "Setting", icon: <SettingsIcon size={18} />, items: [{ id: "settings", label: "Main Setting" }, { id: "contact", label: "Contact Setting" }, { id: "howtoplay", label: "How To Play" }, { id: "slider", label: "Slider Image" }, { id: "withdrawdays", label: "Withdraw Day Option" }, { id: "golden", label: "Golden Ank" }] },
+  { group: "Setting", icon: <SettingsIcon size={18} />, items: [{ id: "settings", label: "Main Setting" }, { id: "contact", label: "Contact Setting" }, { id: "howtoplay", label: "How To Play" }, { id: "slider", label: "Slider Image" }, { id: "withdrawdays", label: "Withdraw Day Option" }] },
   { group: "Notice Management", icon: <Megaphone size={18} />, items: [{ id: "notice", label: "Send Notice" }, { id: "push", label: "Push Notification" }] },
   { group: "Report Managment", icon: <FileText size={18} />, items: [{ id: "bids", label: "Bid History Report" }, { id: "sell", label: "Customer Sell Report" }] },
   { group: "Game Managment", icon: <Dices size={18} />, items: catItems("main") },
@@ -49,7 +49,7 @@ const NAV: Item[] = [
 const CRUMB: Record<string, string> = {
   dashboard: "Dashboard", declare: "Result Declared", prediction: "Prediction", roles: "Role", users: "Users", fund: "Fund Management",
   withdraw: "Withdraw Management", autodeposit: "Auto Deposit History", revert: "Bid Revert", settings: "Main Setting", contact: "Contact Setting",
-  howtoplay: "How To Play", slider: "Slider Image", withdrawdays: "Withdraw Day Option", golden: "Golden Ank", notice: "Send Notice",
+  howtoplay: "How To Play", slider: "Slider Image", withdrawdays: "Withdraw Day Option", notice: "Send Notice",
   push: "Push Notification", bids: "Bid History", sell: "Customer Sell Report", games: "Game Name", rates: "Game Rates", numbers: "Game Numbers",
 };
 
@@ -106,7 +106,6 @@ function Console({ onLogout }: { onLogout: () => void }) {
     case "howtoplay": body = <HowToPlaySetting />; break;
     case "slider": body = <SliderImages />; break;
     case "withdrawdays": body = <WithdrawDays />; break;
-    case "golden": body = <GoldenAnk />; break;
     case "notice": body = <SendNotice />; break;
     case "push": body = <PushNotification />; break;
     case "bids": body = <BidHistory key={arg ?? "all"} cat={arg ? cat : undefined} />; break;
