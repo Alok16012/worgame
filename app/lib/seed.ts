@@ -146,7 +146,7 @@ export function seedState(): State {
       }
     }
     for (let i = rnd(3, 7); i > 0; i--) {
-      s.txns.push({ id: nid(s), userId: pick(players).id, type: "deposit", dir: "cr", mode: pick(["Google Pay", "PhonePe", "Paytm"]), amount: pick([500, 1000, 1000, 2000, 5000]), date, time: t2(), status: "approved", remark: "Deposit Fund", utr: "UTR" + rnd(100000000, 999999999) });
+      s.txns.push({ id: nid(s), userId: pick(players).id, type: "deposit", dir: "cr", mode: pick(["Google Pay", "PhonePe", "Paytm"]), amount: pick([500, 1000, 1000, 2000, 5000]), date, time: t2(), status: d === 0 ? "success" : "approved", remark: "Deposit Fund", utr: "UTR" + rnd(100000000, 999999999) });
     }
   }
   for (let i = 0; i < 9; i++) {

@@ -300,7 +300,24 @@ export function deposit(s: State, userId: number, amount: number, app: string) {
   const u = findUser(s, userId) ?? fail("User not found");
   checkDeposit(s, amount);
   u.balance += amount;
-  addTxn(s, userId, "deposit", "cr", amount, "Deposit Fund", { mode: app, utr: "UTR" + Math.floor(1e11 + Math.random() * 9e11), status: "approved" });
+  // Credited straight away but "success" = not yet checked by admin (Auto Deposit History → Approve / Reject).
+  addTxn(s, userId, "deposit", "cr", amount, "Deposit Fund", { mode: app, utr: "UTR" + Math.floor(1e11 + Math.random() * 9e11), status: "success" });
+}
+
+/** Deposit money that is really in the user's wallet: auto UPI (checked or not) or an approved request. */
+export const isCredited = (t: Txn) => t.type === "deposit" && (t.status === "approved" || t.status === "success");
+
+/** Admin check of an auto UPI deposit. Reject takes the credited amount back out of the wallet. */
+export function decideAutoDeposit(s: State, txnId: number, status: "approved" | "rejected") {
+  const t = s.txns.find((x) => x.id === txnId && x.type === "deposit") ?? fail("Deposit not found");
+  if (t.status !== "success") fail("Deposit already checked");
+  const u = findUser(s, t.userId)!;
+  t.status = status;
+  if (status === "rejected") {
+    u.balance -= t.amount;
+    t.remark = "Deposit rejected by admin — amount reversed";
+  }
+  log(s, `Auto Deposit ${status}`, `${u.name} ${inr(t.amount)} ${t.mode ?? ""} ${t.utr ?? ""}${status === "rejected" && u.balance < 0 ? ` (wallet now ${inr(u.balance)})` : ""}`);
 }
 
 /** Manual mode (setting OFF): the player raises an Add Fund request; nothing is credited until the admin approves. */
@@ -414,7 +431,7 @@ export function gameReport(s: State, date: string, gameId?: number) {
   return {
     bids, bidAmt, wins: bids.filter((b) => b.status === "won"), winAmt, profit: bidAmt - winAmt,
     withdrawals: tx.filter((x) => x.type === "withdraw" && x.status !== "rejected"),
-    deposits: tx.filter((x) => x.type === "deposit" && x.status === "approved"),
+    deposits: tx.filter(isCredited),
     manual: tx.filter((x) => x.type === "manual" && x.dir === "cr"),
   };
 }

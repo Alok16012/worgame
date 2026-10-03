@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Dices, UserRound, Users } from "lucide-react";
-import { findGame, findUser, gameReport, liveBids } from "../../lib/engine";
+import { findGame, findUser, gameReport, isCredited, liveBids } from "../../lib/engine";
 import { fmtDate, fmtTime, inr, sum, ymd } from "../../lib/format";
 import { useStore } from "../../lib/store";
 import type { Bid, Session, Txn } from "../../lib/types";
@@ -24,7 +24,7 @@ export function Dashboard({ go }: { go: (r: string) => void }) {
   const R = gameReport(s, rep.date, rep.game || undefined);
   const [view, setView] = useState<null | "bids" | "wins" | "wd" | "dep" | "man">(null);
 
-  const deps = s.txns.filter((x) => x.type === "deposit" && x.status === "approved" && x.mode !== "Manual").slice().reverse();
+  const deps = s.txns.filter((x) => isCredited(x) && x.mode !== "Manual").slice().reverse();
   const kpis = [
     { l: "Active Users", v: active, icon: <Users size={56} />, bg: "#0d6efd", to: "users" },
     { l: "Today Registration", v: s.users.filter((u) => u.joined.startsWith(t)).length, icon: <UserRound size={56} />, bg: "#1c8cf0", to: "users" },

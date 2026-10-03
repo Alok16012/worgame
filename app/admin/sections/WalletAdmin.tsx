@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { decideFund, decideWithdraw, findUser, manualFund } from "../../lib/engine";
+import { decideAutoDeposit, decideFund, decideWithdraw, findUser, isCredited, manualFund } from "../../lib/engine";
 import { addDays, fmtDate, fmtTime, inr, sum, ymd } from "../../lib/format";
 import { useStore } from "../../lib/store";
 import type { TxnStatus } from "../../lib/types";
 import { Badge, Btn, Card, DataTable, Field, Stat, Tabs, useAdmin } from "../ui";
 
-const fundBadge = (st: string) => st === "pending" ? <Badge tone="amber">Pending</Badge> : st === "rejected" ? <Badge tone="red">Rejected</Badge> : <Badge tone="green">Approved</Badge>;
+const fundBadge = (st: string) => st === "pending" ? <Badge tone="amber">Pending</Badge> : st === "success" ? <Badge tone="amber">To Check</Badge> : st === "rejected" ? <Badge tone="red">Rejected</Badge> : <Badge tone="green">Approved</Badge>;
 
 export function FundManagement() {
   const { state: s, attempt } = useStore();
@@ -44,7 +44,7 @@ export function FundManagement() {
     <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         <Stat label="Total Wallet Balance" value={inr(sum(s.users, (u) => u.balance))} />
-        <Stat label="Total Deposit (Approved)" value={inr(sum(s.txns.filter((x) => x.type === "deposit" && x.status === "approved"), (x) => x.amount))} tone="green" />
+        <Stat label="Total Deposit (Credited)" value={inr(sum(s.txns.filter(isCredited), (x) => x.amount))} tone="green" />
         <Stat label="Pending Add Fund Requests" value={`${pending.length} · ${inr(sum(pending, (x) => x.amount))}`} />
         <Stat label="Total Withdraw (Paid)" value={inr(sum(s.txns.filter((x) => x.type === "withdraw" && x.status === "approved"), (x) => x.amount))} tone="red" />
       </div>
@@ -117,20 +117,47 @@ export function WithdrawManagement({ go }: { go: (r: string) => void }) {
 }
 
 export function AutoDeposit() {
-  const { state: s } = useStore();
+  const { state: s, attempt } = useStore();
+  const { confirm, toast } = useAdmin();
   const [draft, setDraft] = useState({ from: addDays(-6), to: ymd() });
   const [f, setF] = useState(draft);
-  const list = s.txns.filter((x) => x.type === "deposit" && x.status === "approved" && x.mode !== "Manual" && x.date >= f.from && x.date <= f.to).slice().reverse();
+  const [tab, setTab] = useState<"all" | "success" | "approved" | "rejected">("success");
+  const auto = s.txns.filter((x) => x.type === "deposit" && x.mode !== "Manual" && x.status !== "pending" && x.date >= f.from && x.date <= f.to);
+  const list = auto.filter((x) => tab === "all" || x.status === tab).slice().reverse();
+  const n = (st: string) => auto.filter((x) => x.status === st).length;
+
+  const act = async (id: number, st: "approved" | "rejected") => {
+    const x = auto.find((t) => t.id === id)!;
+    const u = findUser(s, x.userId)!;
+    const ok = await confirm({
+      title: st === "approved" ? "Approve Deposit" : "Reject Deposit",
+      body: st === "approved"
+        ? <>Confirm <b>{inr(x.amount)}</b> from <b>{u.name}</b> ({x.mode}, {x.utr}) is received in your account.</>
+        : <>Payment of <b>{inr(x.amount)}</b> by <b>{u.name}</b> not received? Rejecting takes {inr(x.amount)} back out of the wallet (current balance {inr(u.balance)}{u.balance < x.amount ? <b className="text-rose-600"> — wallet will go negative</b> : null}).</>,
+      ok: st === "approved" ? "Approve" : "Reject", tone: st === "approved" ? "green" : "red",
+    });
+    if (!ok) return;
+    const r = attempt((d) => decideAutoDeposit(d, id, st));
+    if (r.ok) toast(st === "approved" ? "Deposit approved" : `Deposit rejected · ${inr(x.amount)} reversed`, "ok"); else toast(r.error, "bad");
+  };
+
   return (
     <Card title="Auto Deposit History">
+      <p className="text-xs text-slate-500 mb-4">UPI deposits are added to the wallet straight away and wait here as <b>To Check</b>. Match them with your bank / UPI statement: Approve if the money came, Reject if not (the amount is taken back from the wallet).</p>
       <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-4 items-end mb-4">
         <Field label="From Date"><input type="date" className="admin-input" value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value })} /></Field>
         <Field label="To Date"><input type="date" className="admin-input" value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} /></Field>
         <Btn onClick={() => setF(draft)}>Submit</Btn>
       </div>
+      <Tabs value={tab} onChange={setTab} items={[{ id: "all", label: `All (${auto.length})` }, { id: "success", label: `To Check (${n("success")})` }, { id: "approved", label: `Approved (${n("approved")})` }, { id: "rejected", label: `Rejected (${n("rejected")})` }]} />
       <div className="text-sm text-slate-600 mb-3">Total: <b>{inr(sum(list, (x) => x.amount))}</b> in {list.length} deposits</div>
-      <DataTable head={["#", "User Name", "Mobile", "Amount", "UPI App", "UTR", "Date"]}
-        rows={list.map((x, i) => { const u = findUser(s, x.userId)!; return [i + 1, u.name, u.mobile, inr(x.amount), x.mode, x.utr, `${fmtDate(x.date)} ${fmtTime(x.time)}`]; })}
+      <DataTable key={tab} head={["#", "User Name", "Mobile", "Amount", "UPI App", "UTR", "Wallet", "Date", "Action / Status"]}
+        rows={list.map((x, i) => {
+          const u = findUser(s, x.userId)!;
+          return [i + 1, u.name, u.mobile, <b key="a">{inr(x.amount)}</b>, x.mode, x.utr, inr(u.balance), `${fmtDate(x.date)} ${fmtTime(x.time)}`,
+            x.status === "success" ? <div key="b" className="flex gap-1.5"><Btn size="sm" variant="green" onClick={() => act(x.id, "approved")}>Approve</Btn><Btn size="sm" variant="red" onClick={() => act(x.id, "rejected")}>Reject</Btn></div>
+              : x.status === "rejected" ? <Badge key="s" tone="red">Rejected · Reversed</Badge> : <Badge key="s" tone="green">Approved</Badge>];
+        })}
         text={list.map((x) => { const u = findUser(s, x.userId)!; return `${u.name} ${u.mobile} ${x.utr}`; })} />
     </Card>
   );

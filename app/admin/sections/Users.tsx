@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Ban, Eye, EyeOff, MessageCircle, Pencil, Phone, Plus } from "lucide-react";
-import { findGame, log, manualFund, nid, registerUser, revertBids, updateUser } from "../../lib/engine";
+import { findGame, isCredited, log, manualFund, nid, registerUser, revertBids, updateUser } from "../../lib/engine";
 import { fmtDate, fmtTime, inr, sum } from "../../lib/format";
 import { useStore } from "../../lib/store";
 import { MODULES, type Bid, type User } from "../../lib/types";
@@ -80,7 +80,7 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
 
   const tx = s.txns.filter((x) => x.userId === id);
   const deposits = tx.filter((x) => x.type === "deposit").reverse();
-  const approvedDeposits = deposits.filter((x) => x.status === "approved");
+  const approvedDeposits = deposits.filter(isCredited);
   const withdraws = tx.filter((x) => x.type === "withdraw").reverse();
   const bids = s.bids.filter((b) => b.userId === id).reverse();
   const wallet = tx.filter((x) => tab === "all" || x.dir === tab).reverse();
@@ -158,7 +158,7 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
 
       <Card className="mt-5" title="Add Fund Request">
         <DataTable head={["Sr No", "Request Amount", "Transaction", "UPI App", "Date", "Time", "Action"]}
-          rows={deposits.map((x, i) => [i + 1, x.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 }), <span key="c" className="text-emerald-600">Credit</span>, x.mode, fmtDate(x.date), fmtTime(x.time), x.status === "pending" ? <Btn key="a" size="sm" variant="amber" onClick={() => go("fund")}>Pending</Btn> : <Badge key="a" tone={x.status === "rejected" ? "red" : "green"}>{x.status === "rejected" ? "Rejected" : "Approved"}</Badge>])}
+          rows={deposits.map((x, i) => [i + 1, x.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 }), <span key="c" className="text-emerald-600">Credit</span>, x.mode, fmtDate(x.date), fmtTime(x.time), x.status === "pending" ? <Btn key="a" size="sm" variant="amber" onClick={() => go("fund")}>Pending</Btn> : x.status === "success" ? <Btn key="a" size="sm" variant="amber" onClick={() => go("autodeposit")}>To Check</Btn> : <Badge key="a" tone={x.status === "rejected" ? "red" : "green"}>{x.status === "rejected" ? "Rejected" : "Approved"}</Badge>])}
           text={deposits.map((x) => `${x.amount} ${x.date}`)} />
       </Card>
 
