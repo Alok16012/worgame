@@ -44,7 +44,8 @@ export function Deposit({ nav }: { nav: Nav }) {
     toast("Add Fund request sent. Admin will contact you for payment.");
     setAmount("");
   };
-  const mine = state.txns.filter((x) => x.userId === user.id && x.type === "deposit").slice(-5).reverse();
+  // Full history lives in Wallet Statement; here only an open request is worth a reminder.
+  const pending = state.txns.find((x) => x.userId === user.id && x.type === "deposit" && x.status === "pending");
   const confirmPaid = () => {
     const r = attempt((d) => deposit(d, user.id, amt, paying ?? "UPI"));
     setPaying(null);
@@ -86,15 +87,9 @@ export function Deposit({ nav }: { nav: Nav }) {
             <div className="text-xs text-slate-500 mt-2 text-center">Admin will contact you on WhatsApp with payment details. The amount is added after payment is confirmed.</div>
           </div>
         )}
-        {mine.length > 0 && (
-          <div className="ybox p-4">
-            <div className="font-semibold text-slate-800 mb-2">My Add Fund Requests</div>
-            {mine.map((x) => (
-              <div key={x.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 text-sm">
-                <div><b>₹{x.amount}</b><div className="text-[11px] text-slate-400">{fmtDate(x.date)} {fmtTime(x.time)} · {x.mode}</div></div>
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded text-white ${x.status === "pending" ? "bg-amber-500" : x.status === "rejected" ? "bg-rose-500" : "bg-emerald-500"}`}>{x.status === "pending" ? "Pending" : x.status === "rejected" ? "Rejected" : "Approved"}</span>
-              </div>
-            ))}
+        {pending && (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3">
+            Your Add Fund request of <b>₹{pending.amount}</b> is waiting for admin approval.
           </div>
         )}
         <a href={whatsappLink(s.contact.whatsapp)} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1.5 text-sm text-slate-600 bg-white rounded-lg py-3">

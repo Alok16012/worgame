@@ -80,8 +80,8 @@ export function Statement({ nav }: { nav: Nav }) {
         <div className="ybox divide-y divide-slate-100">
           {list.map((x) => (
             <div key={x.id} className="flex items-center gap-3 px-4 py-3">
-              <div className="flex-1 min-w-0"><div className="text-sm text-slate-800">{x.remark}</div><div className="text-[11px] text-slate-400">{fmtDate(x.date)} {fmtTime(x.time)}{x.status === "pending" ? " · Pending" : ""}</div></div>
-              <div className={`font-bold ${x.dir === "cr" ? "text-emerald-600" : "text-rose-600"}`}>{x.dir === "cr" ? "+" : "-"}₹{x.amount}</div>
+              <div className="flex-1 min-w-0"><div className="text-sm text-slate-800">{x.remark}</div><div className="text-[11px] text-slate-400">{fmtDate(x.date)} {fmtTime(x.time)}{x.status === "pending" ? <span className="text-amber-600 font-semibold"> · Pending</span> : x.status === "rejected" ? <span className="text-rose-600 font-semibold"> · Rejected</span> : ""}</div></div>
+              <div className={`font-bold ${x.status === "rejected" ? "text-slate-400 line-through" : x.status === "pending" ? "text-amber-600" : x.dir === "cr" ? "text-emerald-600" : "text-rose-600"}`}>{x.dir === "cr" ? "+" : "-"}₹{x.amount}</div>
             </div>
           ))}
           {!list.length && <div className="text-center text-slate-500 py-10">No transactions</div>}
