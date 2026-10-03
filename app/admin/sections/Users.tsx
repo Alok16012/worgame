@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Ban, MessageCircle, Pencil, Phone, Plus } from "lucide-react";
+import { Ban, Eye, EyeOff, MessageCircle, Pencil, Phone, Plus } from "lucide-react";
 import { findGame, log, manualFund, nid, registerUser, revertBids, updateUser } from "../../lib/engine";
 import { fmtDate, fmtTime, inr, sum } from "../../lib/format";
 import { useStore } from "../../lib/store";
@@ -74,6 +74,7 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
   const [edit, setEdit] = useState<User | null>(null);
   const [tab, setTab] = useState<"all" | "cr" | "dr">("all");
   const [editing, setEditing] = useState<Bid | null>(null);
+  const [showPw, setShowPw] = useState(true); // admin reads it out when a user forgets their password
   const u = s.users.find((x) => x.id === id);
   if (!u) return <Card><p>User not found. <button className="text-[#0d6efd]" onClick={() => go("users")}>Back to users</button></p></Card>;
 
@@ -116,7 +117,12 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
             <div className="flex justify-between items-center">Active: <YesNo on={u.status === "active"} onChange={() => set({ status: u.status === "active" ? "inactive" : "active", loggedIn: false }, "User Status")} /></div>
             <div className="flex justify-between items-center">Betting: <YesNo on={u.betting} onChange={() => set({ betting: !u.betting }, "User Betting")} /></div>
             <div className="flex justify-between items-center">Logout Status: {u.loggedIn ? <Btn size="sm" variant="green" onClick={() => set({ loggedIn: false }, "Force Logout")}>Logout Now</Btn> : <Badge tone="gray">Logged out</Badge>}</div>
-            <div className="text-center pt-1">Security Password<div className="text-slate-500">{u.password.replace(/./g, "•")}</div></div>
+            <div className="text-center pt-1">Security Password
+              <div className="flex items-center justify-center gap-2 mt-0.5">
+                <span className="font-semibold text-slate-800 tracking-wider">{showPw ? u.password : u.password.replace(/./g, "•")}</span>
+                <button onClick={() => setShowPw(!showPw)} className="text-slate-500 hover:text-slate-800" aria-label={showPw ? "Hide password" : "Show password"}>{showPw ? <EyeOff size={15} /> : <Eye size={15} />}</button>
+              </div>
+            </div>
           </div>
           <div className="grid grid-cols-2 text-center mt-4 bg-white/60 rounded-lg py-3">
             <div><div className="font-semibold">{u.balance.toFixed(0)}</div><div className="text-[11px] text-slate-500">Available Balance</div></div>
