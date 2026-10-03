@@ -10,7 +10,7 @@ import { CAT_LABEL, CAT_TYPES, CATS, TYPE_LABEL, type Bid, type BidStatus } from
 import type { Nav } from "../nav";
 import { Header, IconField, useSession, whatsappLink } from "../ui";
 
-const STATUS: Record<BidStatus, [string, string]> = { pending: ["Pending", "text-amber-600"], won: ["Win", "text-emerald-600"], lost: ["Loss", "text-rose-600"], reverted: ["Refunded", "text-slate-400"] };
+const STATUS: Record<BidStatus, [string, string]> = { pending: ["Success", "text-sky-600"], won: ["Win", "text-emerald-600"], lost: ["Loss", "text-rose-600"], reverted: ["Refunded", "text-slate-400"] };
 const typeName = (b: Bid) => (b.type === "half_sangam" ? (b.session === "open" ? "Half Sangam A" : "Half Sangam B") : TYPE_LABEL[b.type]);
 
 function BidCard({ b }: { b: Bid }) {

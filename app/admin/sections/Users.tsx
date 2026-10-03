@@ -5,9 +5,10 @@ import { Ban, MessageCircle, Pencil, Phone, Plus } from "lucide-react";
 import { findGame, log, manualFund, nid, registerUser, revertBids, updateUser } from "../../lib/engine";
 import { fmtDate, fmtTime, inr, sum } from "../../lib/format";
 import { useStore } from "../../lib/store";
-import { MODULES, type User } from "../../lib/types";
+import { MODULES, type Bid, type User } from "../../lib/types";
 import { bidTypeLabel, fmtStamp, sessionLabel } from "../common";
 import { Badge, BidBadge, Btn, Card, DataTable, Field, Modal, Tabs, YesNo, useAdmin } from "../ui";
+import { EditBidModal } from "../EditBid";
 
 const wa = (m: string) => `https://wa.me/91${m}`;
 
@@ -72,6 +73,7 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
   const [fund, setFund] = useState<null | { dir: "cr" | "dr"; amount: string }>(null);
   const [edit, setEdit] = useState<User | null>(null);
   const [tab, setTab] = useState<"all" | "cr" | "dr">("all");
+  const [editing, setEditing] = useState<Bid | null>(null);
   const u = s.users.find((x) => x.id === id);
   if (!u) return <Card><p>User not found. <button className="text-[#0d6efd]" onClick={() => go("users")}>Back to users</button></p></Card>;
 
@@ -164,7 +166,7 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
       <Card className="mt-5" title="Bid History">
         <DataTable head={["Sr No", "Game Name", "Bid Date", "Bid Time", "Game Type", "Session", "Value", "Amount", "Status", "Action"]}
           rows={bids.map((b, i) => [i + 1, findGame(s, b.gameId)?.name, fmtDate(b.date), fmtTime(b.time), bidTypeLabel(b), sessionLabel(b), b.value, b.amount.toFixed(2),
-            <BidBadge key="s" s={b.status} />, b.status === "pending" ? <Btn key="d" size="sm" variant="ghost" className="!text-rose-600 !border-rose-300" onClick={() => deleteBid(b.id)}>Delete</Btn> : b.win ? <span key="w" className="text-emerald-600 font-semibold">+{b.win}</span> : ""])}
+            <BidBadge key="s" s={b.status} />, b.status === "pending" ? <div key="d" className="flex gap-1.5"><Btn size="sm" variant="ghost" onClick={() => setEditing(b)}><Pencil size={12} /> Edit</Btn><Btn size="sm" variant="ghost" className="!text-rose-600 !border-rose-300" onClick={() => deleteBid(b.id)}>Delete</Btn></div> : b.win ? <span key="w" className="text-emerald-600 font-semibold">+{b.win}</span> : ""])}
           text={bids.map((b) => `${findGame(s, b.gameId)?.name} ${b.value} ${b.type}`)} />
       </Card>
 
@@ -175,6 +177,7 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
           text={wallet.map((x) => x.remark)} />
       </Card>
 
+      {editing && <EditBidModal bid={editing} onClose={() => setEditing(null)} />}
       {fund && (
         <Modal title="Fund Manage" onClose={() => setFund(null)} footer={<><Btn variant="ghost" onClick={() => setFund(null)}>Close</Btn><Btn onClick={submitFund}>Submit</Btn></>}>
           <div className="text-sm text-slate-600 mb-3">{fund.dir === "cr" ? "Add money to" : "Withdraw money from"} <b>{u.name}</b> (balance {inr(u.balance)})</div>

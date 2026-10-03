@@ -117,7 +117,7 @@ export function Badge({ tone, children }: { tone: Tone; children: React.ReactNod
 }
 
 export function BidBadge({ s }: { s: BidStatus }) {
-  const m: Record<BidStatus, [Tone, string]> = { pending: ["amber", "Pending"], won: ["green", "Win"], lost: ["red", "Loss"], reverted: ["gray", "Reverted"] };
+  const m: Record<BidStatus, [Tone, string]> = { pending: ["blue", "Success"], won: ["green", "Win"], lost: ["red", "Loss"], reverted: ["gray", "Reverted"] };
   return <Badge tone={m[s][0]}>{m[s][1]}</Badge>;
 }
 

@@ -230,6 +230,37 @@ export function deleteResult(s: State, gameId: number, date: string, session: Se
   log(s, "Delete Result", `${g.name} ${fmtDate(date)} ${by}`);
 }
 
+export interface BidEdit { gameId: number; type: GameType; session: Session | null; value: string; amount: number }
+
+/**
+ * Admin correction of a placed bid (customer picked the wrong number / market). Only before its result
+ * is declared. The rate is re-locked for the new game type; an amount change is settled with the wallet.
+ */
+export function editBid(s: State, bidId: number, e: BidEdit) {
+  const b = s.bids.find((x) => x.id === bidId) ?? fail("Bid not found");
+  if (b.status !== "pending") fail("Only bids without a result can be edited");
+  const from = findGame(s, b.gameId)!;
+  const g = findGame(s, e.gameId) ?? fail("Select a game");
+  if (g.cat !== from.cat) fail(`Choose a ${from.cat === "main" ? "main market" : from.cat} game`);
+  if (!CAT_TYPES[g.cat].includes(e.type)) fail(`${TYPE_LABEL[e.type]} is not played in ${g.name}`);
+  const session = g.cat === "main" && e.type !== "jodi" && e.type !== "full_sangam" ? e.session : null;
+  if (g.cat === "main" && e.type !== "jodi" && e.type !== "full_sangam" && !session) fail("Select a session");
+  if (!validValue(e.type, e.value, session)) fail(`Invalid number ${e.value} for ${TYPE_LABEL[e.type]}`);
+  if (!Number.isInteger(e.amount) || e.amount < s.settings.minBid) fail(`Minimum bid amount is ${inr(s.settings.minBid)}`);
+  const next = { ...b, gameId: g.id, type: e.type, session, value: e.value, amount: e.amount };
+  if (judge(next, g.cat, resultOf(s, g.id, b.date)) !== null) fail("Result for this session is already declared — cannot move the bid there");
+  const u = findUser(s, b.userId)!;
+  const diff = e.amount - b.amount;
+  if (diff > u.balance) fail(`User balance is only ${inr(u.balance)}`);
+  if (diff) {
+    u.balance -= diff;
+    addTxn(s, u.id, diff > 0 ? "bet" : "refund", diff > 0 ? "dr" : "cr", Math.abs(diff), `Bid amount corrected by admin for the game: ${g.name}`);
+  }
+  const before = `${from.name} ${TYPE_LABEL[b.type]} ${b.value} ₹${b.amount}`;
+  Object.assign(b, { gameId: g.id, type: e.type, session, value: e.value, amount: e.amount, rate: rateOf(s, g.cat, e.type) });
+  log(s, "Edit Bid", `${u.name}: ${before} → ${g.name} ${TYPE_LABEL[e.type]} ${e.value} ₹${e.amount}`);
+}
+
 /** Refund pending bids of a market/date (cancelled market), or one bid by id. */
 export function revertBids(s: State, gameId: number, date: string, onlyId?: number) {
   const g = findGame(s, gameId) ?? fail("Game not found");

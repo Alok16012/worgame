@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { Download, Pencil } from "lucide-react";
 import { findGame, findUser } from "../../lib/engine";
 import { addDays, fmtDate, fmtTime, inr, sum, ymd } from "../../lib/format";
 import { byAnk, numbersFor } from "../../lib/matka";
 import { useStore } from "../../lib/store";
-import { CAT_LABEL, CAT_TYPES, TYPE_LABEL, type Cat, type GameType, type Session } from "../../lib/types";
+import { CAT_LABEL, CAT_TYPES, TYPE_LABEL, type Bid, type Cat, type GameType, type Session } from "../../lib/types";
 import { bidTypeLabel, GameSelect, sessionLabel } from "../common";
 import { BidBadge, Btn, Card, DataTable, Field, Stat } from "../ui";
+import { EditBidModal } from "../EditBid";
 
 function downloadCsv(name: string, head: string[], rows: (string | number)[][]) {
   const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
@@ -30,6 +31,7 @@ export function BidHistory({ cat }: { cat?: Cat }) {
   }).slice().reverse();
   const live = list.filter((b) => b.status !== "reverted");
   const amt = sum(live, (b) => b.amount), win = sum(live, (b) => b.win ?? 0);
+  const [editing, setEditing] = useState<Bid | null>(null);
 
   return (
     <>
@@ -56,10 +58,12 @@ export function BidHistory({ cat }: { cat?: Cat }) {
         <Stat label="Profit" value={inr(amt - win)} tone={amt - win >= 0 ? "green" : "red"} />
       </div>
       <Card>
-        <DataTable head={["Sr No", "User Name", "Mobile", "Game Name", "Game Type", "Session", "Number", "Amount", "Win", "Status", "Bid Time"]}
-          rows={list.map((b, i) => { const u = findUser(s, b.userId)!; return [i + 1, u.name, u.mobile, findGame(s, b.gameId)?.name, bidTypeLabel(b), sessionLabel(b), <b key="v">{b.value}</b>, b.amount, b.win ?? "—", <BidBadge key="s" s={b.status} />, `${fmtDate(b.date)} ${fmtTime(b.time)}`]; })}
+        <DataTable head={["Sr No", "User Name", "Mobile", "Game Name", "Game Type", "Session", "Number", "Amount", "Win", "Status", "Bid Time", "Action"]}
+          rows={list.map((b, i) => { const u = findUser(s, b.userId)!; return [i + 1, u.name, u.mobile, findGame(s, b.gameId)?.name, bidTypeLabel(b), sessionLabel(b), <b key="v">{b.value}</b>, b.amount, b.win ?? "—", <BidBadge key="s" s={b.status} />, `${fmtDate(b.date)} ${fmtTime(b.time)}`,
+            b.status === "pending" ? <Btn key="e" size="sm" variant="ghost" onClick={() => setEditing(b)}><Pencil size={12} /> Edit</Btn> : ""]; })}
           text={list.map((b) => { const u = findUser(s, b.userId)!; return `${u.name} ${u.mobile} ${b.value}`; })} />
       </Card>
+      {editing && <EditBidModal bid={editing} onClose={() => setEditing(null)} />}
     </>
   );
 }
