@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowDownToLine, BarChart3, Play, PlusCircle, Send, Star } from "lucide-react";
-import { findGame, isOffDay, marketState, resultOf } from "../../lib/engine";
+import { displayResult, findGame, isOffDay, marketState, resultOf } from "../../lib/engine";
 import { addDays, fmtDate, fmtTime, ymd } from "../../lib/format";
 import { resultText } from "../../lib/matka";
 import { useStore } from "../../lib/store";
@@ -26,7 +26,7 @@ export function MarketCard({ g, nav, now }: { g: Game; nav: Nav; now: Date }) {
   const { toast } = useSession();
   const st = marketState(state, g, now);
   const holiday = isOffDay(g, now);
-  const text = resultText(g.cat, resultOf(state, g.id, ymd(now)));
+  const text = resultText(g.cat, displayResult(state, g, now));
   return (
     <div className="rounded-xl overflow-hidden border border-white/10" style={{ background: "linear-gradient(180deg,#173a8c,#10296b)" }}>
       <div className="bg-[#0a1a48] text-white text-[11px] font-semibold px-3 py-1.5 flex justify-between tracking-wide">

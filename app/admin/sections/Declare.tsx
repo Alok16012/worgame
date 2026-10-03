@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { declareResult, deleteResult, findGame, findUser, previewWinners, resultOf } from "../../lib/engine";
+import { declareResult, deleteResult, gameDay, findGame, findUser, previewWinners, resultOf } from "../../lib/engine";
 import { fmtDate, inr, ymd } from "../../lib/format";
 import { normalizePana, panaDigit } from "../../lib/matka";
 import { useStore } from "../../lib/store";
@@ -12,13 +12,13 @@ import { Btn, Card, Field, Table, useAdmin } from "../ui";
 export function DeclareResult({ cat }: { cat: Cat }) {
   const { state: s, attempt } = useStore();
   const { confirm, toast } = useAdmin();
-  const [date, setDate] = useState(ymd());
+  const [date, setDate] = useState(() => gameDay()); // after midnight, night markets still belong to yesterday
   const [gameId, setGameId] = useState<number | "">("");
   const [session, setSession] = useState<Session>("open");
   const [loaded, setLoaded] = useState<{ gameId: number; date: string; session: Session } | null>(null);
   const [value, setValue] = useState("");
   const [winners, setWinners] = useState<(Bid & { win: number })[] | null>(null);
-  const [histDate, setHistDate] = useState(ymd());
+  const [histDate, setHistDate] = useState(() => gameDay());
 
   // Only games that still have a result to declare for this date: fully declared games are hidden.
   const pending = (game: Game, d = date) => {

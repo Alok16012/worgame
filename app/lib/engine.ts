@@ -1,4 +1,4 @@
-import { fmtDate, hhmm, inr, mins, sum, ymd } from "./format";
+import { addDays, fmtDate, hhmm, inr, mins, sum, ymd } from "./format";
 import { isPana, panaDigit, panaType, resultText } from "./matka";
 import { CAT_TYPES, TYPE_LABEL, type Bid, type Cat, type Game, type GameType, type Result, type Session, type PayMethod, type State, type Txn, type TxnType, type User } from "./types";
 
@@ -59,6 +59,18 @@ export function marketState(s: State, g: Game, now = new Date()): MarketState {
   const done = g.cat === "starline" ? !!r?.openPana : !!r?.jodi;
   const ok = !done && t < mins(g.close);
   return ok ? { openOk: true, closeOk: true, anyOk: true, types: CAT_TYPES[g.cat] } : CLOSED;
+}
+
+/** Results stay on the home screen until this hour of the next morning. */
+export const RESULT_HOLD_HOUR = 8;
+
+/** The result "day" the app is on: before 8 AM it is still yesterday (night markets finish after midnight). */
+export const gameDay = (now = new Date()) => (now.getHours() < RESULT_HOLD_HOUR ? addDays(-1, now) : ymd(now));
+
+/** Result to show on a market card: today's if declared, else (before 8 AM) yesterday's. */
+export function displayResult(s: State, g: Game, now = new Date()) {
+  const today = resultOf(s, g.id, ymd(now));
+  return today || now.getHours() >= RESULT_HOLD_HOUR ? today : resultOf(s, g.id, addDays(-1, now));
 }
 
 export function withdrawOpen(s: State, now = new Date()) {
