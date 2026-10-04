@@ -185,7 +185,7 @@ function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () =
 
 function AdminLogin({ onLogin }: { onLogin: (user: AdminUser) => void }) {
   const { state, attempt } = useStore();
-  const [username, setUsername] = useState("admin");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -251,9 +251,6 @@ function AdminLogin({ onLogin }: { onLogin: (user: AdminUser) => void }) {
             {loading ? "Verifying..." : "Sign In to Admin"}
           </button>
         </form>
-        <div className="text-[11px] text-slate-400 text-center mt-4 pt-3 border-t border-slate-100">
-          Default Master Admin: <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-600">admin</code> / <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-600">admin@777</code>
-        </div>
       </div>
     </div>
   );
