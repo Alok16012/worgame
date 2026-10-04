@@ -429,6 +429,14 @@ export function updateUser(s: State, userId: number, patch: Partial<User>, actio
   if (action) log(s, action, u.name);
 }
 
+export function resetUserPassword(s: State, mobile: string, newPassword: string) {
+  if (newPassword.length < 4) fail("Password must be at least 4 characters");
+  const u = s.users.find((x) => x.mobile === mobile) ?? fail("Mobile number is not registered");
+  u.password = newPassword;
+  log(s, "Reset Password", u.name);
+  return u.id;
+}
+
 /* ---------------- reporting ---------------- */
 
 export const liveBids = (s: State, pred: (b: Bid) => boolean) => s.bids.filter((b) => b.status !== "reverted" && pred(b));

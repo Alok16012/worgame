@@ -34,7 +34,7 @@ function Switch({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
 type NumKey = "minDeposit" | "maxDeposit" | "minWithdraw" | "maxWithdraw" | "minBid" | "maxBid" | "welcomeBonus";
 
 export function MainSetting() {
-  const { f, setF, save } = useSettingsForm(["appName", "marquee", "website", "upiId", "version", "minDeposit", "maxDeposit", "minWithdraw", "maxWithdraw", "minBid", "maxBid", "welcomeBonus", "autoUpi", "demoMode", "maintenance"]);
+  const { f, setF, save } = useSettingsForm(["appName", "marquee", "website", "upiId", "version", "minDeposit", "maxDeposit", "minWithdraw", "maxWithdraw", "minBid", "maxBid", "welcomeBonus", "autoUpi", "demoMode", "maintenance", "otpApiKey", "otpEnabled"]);
   const num = (k: NumKey, label: string) => <Field label={label}><input className="admin-input" inputMode="numeric" value={f[k]} onChange={(e) => setF({ ...f, [k]: Number(e.target.value.replace(/\D/g, "")) })} /></Field>;
   const text = (k: "appName" | "marquee" | "website" | "upiId" | "version", label: string) => <Field label={label}><input className="admin-input" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></Field>;
   return (
@@ -52,9 +52,18 @@ export function MainSetting() {
         {text("version", "App Version")}
         {num("minBid", "Min Bid Amount")}
         {num("maxBid", "Max Bid Amount")}
+        <Field label="2Factor.in SMS API Key (4-Digit OTP)" className="md:col-span-3">
+          <input
+            className="admin-input font-mono"
+            placeholder="e.g. a0cb5b35-bdb3-425b-a648-2a0561771322"
+            value={f.otpApiKey || ""}
+            onChange={(e) => setF({ ...f, otpApiKey: e.target.value.trim() })}
+          />
+        </Field>
       </div>
       <div className="grid md:grid-cols-2 gap-3 mt-5">
         <Switch on={f.autoUpi} onChange={(v) => setF({ ...f, autoUpi: v })} label="Auto UPI Payment" hint="ON: Add Fund opens PhonePe / Google Pay / Paytm and credits the wallet. OFF: players send an Add Fund request that you approve in Fund Management." />
+        <Switch on={f.otpEnabled ?? true} onChange={(v) => setF({ ...f, otpEnabled: v })} label="4-Digit OTP Verification" hint="Require players to verify 4-digit SMS OTP on registration and forgot password." />
         <Switch on={f.demoMode} onChange={(v) => setF({ ...f, demoMode: v })} label="Demo mode" hint="Ignore the withdraw time window. Market OPEN/CLOSE timings always apply." />
         <Switch on={f.maintenance} onChange={(v) => setF({ ...f, maintenance: v })} label="Maintenance mode" hint="Player app shows 'under maintenance'." />
       </div>

@@ -80,6 +80,8 @@ export function seedState(): State {
       welcomeBonus: 0,
       upiId: "shrikalyan@upi",
       autoUpi: true,
+      otpApiKey: "a0cb5b35-bdb3-425b-a648-2a0561771322",
+      otpEnabled: true,
       demoMode: false, // Real live mode
       maintenance: false,
       version: "1.0.0",

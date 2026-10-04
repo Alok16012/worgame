@@ -138,6 +138,8 @@ export interface Settings {
   upiId: string;
   /** ON: Add Fund opens the UPI app and credits automatically. OFF: Add Fund sends a request the admin approves. */
   autoUpi: boolean;
+  otpApiKey?: string;
+  otpEnabled?: boolean;
   demoMode: boolean; // ignore the withdraw time window (market timings always apply)
   maintenance: boolean;
   version: string;
