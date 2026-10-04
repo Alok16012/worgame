@@ -216,7 +216,7 @@ export function Roles() {
   const { toast } = useAdmin();
   const [name, setName] = useState("");
   const [perms, setPerms] = useState<string[]>([]);
-  const [admin, setAdmin] = useState({ name: "", username: "", role: "" });
+  const [admin, setAdmin] = useState({ name: "", username: "", password: "", role: "" });
 
   const addRole = () => {
     if (!name.trim() || !perms.length) return toast("Enter a role name and pick permissions", "bad");
@@ -225,9 +225,21 @@ export function Roles() {
   };
   const addAdmin = () => {
     if (!admin.name.trim() || !admin.username.trim()) return toast("Name and username are required", "bad");
-    if (s.admins.some((a) => a.username === admin.username.trim())) return toast("Username already taken", "bad");
-    update((d) => { d.admins.push({ id: nid(d), name: admin.name.trim(), username: admin.username.trim(), role: admin.role || s.roles[0].name, active: true }); log(d, "Add Admin", admin.username); });
-    setAdmin({ name: "", username: "", role: "" }); toast("Sub admin created", "ok");
+    if (s.admins.some((a) => a.username.toLowerCase() === admin.username.trim().toLowerCase())) return toast("Username already taken", "bad");
+    const pwd = admin.password.trim() || "admin@777";
+    update((d) => {
+      d.admins.push({
+        id: nid(d),
+        name: admin.name.trim(),
+        username: admin.username.trim(),
+        password: pwd,
+        role: admin.role || s.roles[0]?.name || "Super Admin",
+        active: true,
+      });
+      log(d, "Add Admin", admin.username);
+    });
+    setAdmin({ name: "", username: "", password: "", role: "" });
+    toast("Sub admin created", "ok");
   };
 
   return (
@@ -246,10 +258,13 @@ export function Roles() {
         </Card>
         <Card title="Add Sub Admin">
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="Name"><input className="admin-input" value={admin.name} onChange={(e) => setAdmin({ ...admin, name: e.target.value })} /></Field>
-            <Field label="Username"><input className="admin-input" value={admin.username} onChange={(e) => setAdmin({ ...admin, username: e.target.value })} /></Field>
+            <Field label="Name"><input className="admin-input" value={admin.name} onChange={(e) => setAdmin({ ...admin, name: e.target.value })} placeholder="Full name" /></Field>
+            <Field label="Username"><input className="admin-input" value={admin.username} onChange={(e) => setAdmin({ ...admin, username: e.target.value })} placeholder="username" /></Field>
           </div>
-          <Field label="Role" className="mt-3"><select className="admin-input" value={admin.role} onChange={(e) => setAdmin({ ...admin, role: e.target.value })}>{s.roles.map((r) => <option key={r.id}>{r.name}</option>)}</select></Field>
+          <div className="grid sm:grid-cols-2 gap-3 mt-3">
+            <Field label="Password"><input type="password" className="admin-input" value={admin.password} onChange={(e) => setAdmin({ ...admin, password: e.target.value })} placeholder="Default: admin@777" /></Field>
+            <Field label="Role"><select className="admin-input" value={admin.role} onChange={(e) => setAdmin({ ...admin, role: e.target.value })}>{s.roles.map((r) => <option key={r.id}>{r.name}</option>)}</select></Field>
+          </div>
           <Btn className="mt-4" onClick={addAdmin}>Submit</Btn>
         </Card>
       </div>
@@ -258,8 +273,30 @@ export function Roles() {
           <div key="p" className="flex flex-wrap gap-1 whitespace-normal max-w-2xl">{r.perms.map((p) => <Badge key={p} tone="blue">{p}</Badge>)}</div>, s.admins.filter((a) => a.role === r.name).length])} />
       </Card>
       <Card className="mt-5" title="Sub Admins">
-        <DataTable head={["Sr No", "Name", "Username", "Role", "Active"]} rows={s.admins.map((a, i) => [i + 1, a.name, a.username, a.role,
-          a.username === "admin" ? <Badge key="s" tone="green">Yes</Badge> : <YesNo key="s" on={a.active} onChange={() => update((d) => { const x = d.admins.find((y) => y.id === a.id)!; x.active = !x.active; })} />])} />
+        <DataTable head={["Sr No", "Name", "Username", "Role", "Password", "Active"]} rows={s.admins.map((a, i) => [
+          i + 1,
+          a.name,
+          a.username,
+          a.role,
+          <button
+            key="p"
+            onClick={() => {
+              const newPwd = window.prompt(`Enter new password for ${a.username}:`, a.password || "admin@777");
+              if (newPwd && newPwd.trim().length >= 4) {
+                update((d) => {
+                  const x = d.admins.find((y) => y.id === a.id)!;
+                  x.password = newPwd.trim();
+                  log(d, "Change Password", a.username);
+                });
+                toast(`Password updated for ${a.username}`, "ok");
+              }
+            }}
+            className="text-xs text-blue-600 hover:text-blue-800 underline font-medium"
+          >
+            Change Password
+          </button>,
+          a.username === "admin" ? <Badge key="s" tone="green">Yes</Badge> : <YesNo key="s" on={a.active} onChange={() => update((d) => { const x = d.admins.find((y) => y.id === a.id)!; x.active = !x.active; })} />
+        ])} />
       </Card>
     </>
   );

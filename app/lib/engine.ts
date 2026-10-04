@@ -1,6 +1,6 @@
 import { addDays, fmtDate, hhmm, inr, mins, sum, ymd } from "./format";
 import { isPana, panaDigit, panaType, resultText } from "./matka";
-import { CAT_TYPES, TYPE_LABEL, type Bid, type Cat, type Game, type GameType, type Result, type Session, type PayMethod, type State, type Txn, type TxnType, type User } from "./types";
+import { CAT_TYPES, TYPE_LABEL, type AdminUser, type Bid, type Cat, type Game, type GameType, type Result, type Session, type PayMethod, type State, type Txn, type TxnType, type User } from "./types";
 
 // All game rules as plain functions over State. The store runs them on a cloned draft, so a thrown
 // GameError leaves saved data untouched. In production each exported action becomes a server endpoint
@@ -411,6 +411,16 @@ export function loginUser(s: State, mobile: string, password: string) {
   u.lastLogin = `${ymd()} ${hhmm()}`;
   u.loggedIn = true;
   return u.id;
+}
+
+export function loginAdmin(s: State, username: string, password: string): AdminUser {
+  const u = username.trim().toLowerCase();
+  const a = s.admins.find((x) => x.username.toLowerCase() === u) ?? fail("Invalid username or password");
+  if (!a.active) fail("Admin account is deactivated. Contact super admin.");
+  const expected = a.password || "admin@777";
+  if (password !== expected) fail("Invalid username or password");
+  log(s, "Admin Login", a.username);
+  return a;
 }
 
 export function updateUser(s: State, userId: number, patch: Partial<User>, action?: string) {

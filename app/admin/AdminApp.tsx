@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { BarChart3, ChevronDown, ChevronUp, FileText, Gamepad2, Home, LogOut, Megaphone, Menu, RotateCcw, Settings as SettingsIcon, Smartphone, Star, Target, Users, Wallet, Dices } from "lucide-react";
 import { StoreProvider, useStore } from "../lib/store";
-import type { Cat } from "../lib/types";
+import type { AdminUser, Cat } from "../lib/types";
+import { loginAdmin } from "../lib/engine";
 import { AdminProvider, useAdmin } from "./ui";
 import { Dashboard } from "./sections/Dashboard";
 import { DeclareResult } from "./sections/Declare";
@@ -75,7 +76,7 @@ export function Logo({ name }: { name: string }) {
 
 const isOn = (route: string, id: string) => route === id || route.startsWith(`${id}/`);
 
-function Console({ onLogout }: { onLogout: () => void }) {
+function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () => void }) {
   const { state, reset } = useStore();
   const { confirm, toast } = useAdmin();
   const [route, go] = useHashRoute();
@@ -119,9 +120,9 @@ function Console({ onLogout }: { onLogout: () => void }) {
   const crumbs = ["Dashboard", ...(page === "dashboard" || !CRUMB[page] ? [] : [page === "users" && arg ? "User" : CRUMB[page]]), ...(page === "users" && arg ? ["User Profile"] : [])];
 
   const resetData = async () => {
-    if (await confirm({ title: "Reset demo data", body: "All users, bids, results and settings will be replaced with fresh sample data in every open tab.", ok: "Reset", tone: "red" })) {
+    if (await confirm({ title: "Reset System Database", body: "Warning: All users, bids, results and settings will be reset to initial state. Proceed?", ok: "Reset", tone: "red" })) {
       reset();
-      toast("Demo data reset", "ok");
+      toast("Database reset to initial state", "ok");
     }
   };
 
@@ -133,11 +134,16 @@ function Console({ onLogout }: { onLogout: () => void }) {
         <button onClick={() => nav("dashboard")} className="hidden sm:inline-flex items-center gap-2 bg-[#f5b301] text-white font-medium px-4 py-2 rounded-md ml-2"><Home size={16} /> View Dashboard</button>
         <div className="flex-1" />
         <a href="/" target="_blank" className="hidden md:inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm"><Smartphone size={16} /> Player App</a>
-        <button onClick={resetData} className="inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm px-2" title="Reset demo data"><RotateCcw size={16} /><span className="hidden md:inline">Reset</span></button>
+        <button onClick={resetData} className="inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm px-2" title="Reset system data"><RotateCcw size={16} /><span className="hidden md:inline">Reset</span></button>
         <div className="flex items-center gap-2 pl-2">
-          <div className="w-9 h-9 rounded bg-[#28a745] text-white grid place-items-center font-bold">A</div>
-          <span className="text-white/90 hidden sm:inline">admin</span>
-          <button onClick={onLogout} className="p-1.5 text-white/60 hover:text-white" title="Logout"><LogOut size={16} /></button>
+          <div className="w-9 h-9 rounded bg-[#28a745] text-white grid place-items-center font-bold text-sm shadow">
+            {adminUser.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="hidden sm:flex flex-col text-left">
+            <span className="text-white/95 text-xs font-semibold leading-tight">{adminUser.name}</span>
+            <span className="text-white/60 text-[10px] leading-tight">{adminUser.role}</span>
+          </div>
+          <button onClick={onLogout} className="p-1.5 text-white/60 hover:text-white ml-1" title="Logout"><LogOut size={16} /></button>
         </div>
       </header>
 
@@ -177,39 +183,127 @@ function Console({ onLogout }: { onLogout: () => void }) {
   );
 }
 
-function AdminLogin({ onLogin }: { onLogin: () => void }) {
+function AdminLogin({ onLogin }: { onLogin: (user: AdminUser) => void }) {
+  const { state, attempt } = useStore();
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const res = attempt((d) => loginAdmin(d, username, password));
+    setLoading(false);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    onLogin(res.value);
+  };
+
   return (
     <div className="min-h-dvh grid place-items-center bg-[#f4f6f9] px-4">
-      <div className="w-full max-w-sm bg-white rounded-xl shadow-lg p-7">
-        <div className="flex justify-center"><div className="bg-[#0e1a3a] rounded-lg p-3"><Logo name="Shri Kalyan" /></div></div>
-        <div className="text-xl font-semibold mt-6 text-slate-800 text-center">Admin Login</div>
-        <form className="mt-5 space-y-3" onSubmit={(e) => { e.preventDefault(); onLogin(); }}>
-          <input defaultValue="admin" className="admin-input" placeholder="Username" />
-          <input type="password" defaultValue="admin123" className="admin-input" placeholder="Password" />
-          <button className="w-full bg-[#0d6efd] text-white font-medium py-2.5 rounded-md">Login</button>
+      <div className="w-full max-w-sm bg-white rounded-xl shadow-lg p-7 border border-slate-200">
+        <div className="flex justify-center">
+          <div className="bg-[#0e1a3a] rounded-lg p-3 shadow-md">
+            <Logo name={state.settings.appName || "Shri Kalyan"} />
+          </div>
+        </div>
+        <div className="text-xl font-bold mt-6 text-slate-800 text-center">Admin Portal Login</div>
+        <div className="text-xs text-slate-500 text-center mt-1">Authorized personnel only</div>
+
+        {error && (
+          <div className="mt-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg font-medium text-center">
+            {error}
+          </div>
+        )}
+
+        <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
+          <div>
+            <label className="text-xs font-semibold text-slate-600 block mb-1">Username</label>
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="admin-input w-full"
+              placeholder="Enter admin username"
+              required
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-600 block mb-1">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="admin-input w-full"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#0d6efd] hover:bg-blue-600 active:bg-blue-700 transition text-white font-semibold py-2.5 rounded-md mt-2 shadow"
+          >
+            {loading ? "Verifying..." : "Sign In to Admin"}
+          </button>
         </form>
-        <div className="text-[11px] text-slate-400 text-center mt-3">Demo: any password works</div>
+        <div className="text-[11px] text-slate-400 text-center mt-4 pt-3 border-t border-slate-100">
+          Default Master Admin: <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-600">admin</code> / <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-600">admin@777</code>
+        </div>
       </div>
     </div>
   );
 }
 
-export default function AdminApp() {
-  const [authed, setAuthed] = useState<boolean | null>(null);
+function AdminContent() {
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    try { setAuthed(sessionStorage.getItem("wg_admin") === "1"); } catch { setAuthed(false); }
+    try {
+      const stored = sessionStorage.getItem("wg_admin_user");
+      if (stored) {
+        setAdminUser(JSON.parse(stored));
+      }
+    } catch {}
+    setLoading(false);
   }, []);
-  const set = (v: boolean) => {
-    try { if (v) sessionStorage.setItem("wg_admin", "1"); else sessionStorage.removeItem("wg_admin"); } catch {}
-    setAuthed(v);
+
+  const handleLogin = (user: AdminUser) => {
+    try {
+      sessionStorage.setItem("wg_admin_user", JSON.stringify(user));
+      sessionStorage.setItem("wg_admin", "1");
+    } catch {}
+    setAdminUser(user);
   };
-  if (authed === null) return <div className="min-h-dvh bg-[#f4f6f9]" />;
-  if (!authed) return <AdminLogin onLogin={() => set(true)} />;
+
+  const handleLogout = () => {
+    try {
+      sessionStorage.removeItem("wg_admin_user");
+      sessionStorage.removeItem("wg_admin");
+    } catch {}
+    setAdminUser(null);
+  };
+
+  if (loading) return <div className="min-h-dvh bg-[#f4f6f9]" />;
+
+  return !adminUser ? (
+    <AdminLogin onLogin={handleLogin} />
+  ) : (
+    <AdminProvider>
+      <Console adminUser={adminUser} onLogout={handleLogout} />
+    </AdminProvider>
+  );
+}
+
+export default function AdminApp() {
   return (
     <StoreProvider fallback={<div className="min-h-dvh bg-[#f4f6f9]" />}>
-      <AdminProvider>
-        <Console onLogout={() => set(false)} />
-      </AdminProvider>
+      <AdminContent />
     </StoreProvider>
   );
 }

@@ -4,10 +4,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { GameError } from "./engine";
 import { seedState, STATE_VERSION } from "./seed";
 import type { State } from "./types";
+import { supabase, isSupabaseConfigured } from "./supabase";
 
-// Shared demo database. State is persisted to localStorage and re-read on the `storage` event,
-// so the player app (/) and admin panel (/admin) open in two tabs stay in sync live.
-// Production would replace this with an API + database; the engine functions map 1:1 to endpoints.
+// Shared demo database. State is persisted to localStorage and re-read on the `storage` event.
+// When Supabase is configured, it syncs to the cloud live across all devices with Supabase Realtime!
 
 const KEY = "wordgame_state_v1";
 
@@ -18,6 +18,7 @@ interface Store {
   /** Like update, but catches GameError and returns { error } instead of throwing. */
   attempt: <R>(fn: (draft: State) => R) => { ok: true; value: R } | { ok: false; error: string };
   reset: () => void;
+  isCloudSynced: boolean;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -43,28 +44,106 @@ function save(s: State) {
 
 export function StoreProvider({ children, fallback = null }: { children: React.ReactNode; fallback?: React.ReactNode }) {
   const [state, setState] = useState<State | null>(null);
+  const [isCloudSynced, setIsCloudSynced] = useState(false);
   const ref = useRef<State | null>(null);
 
+  // Sync state to Supabase in the background
+  const syncToCloud = useCallback(async (s: State) => {
+    if (!isSupabaseConfigured()) return;
+    try {
+      await supabase.from("wordgame_state").upsert({
+        id: "current",
+        state: s,
+        version: s.v,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.warn("Supabase sync warning:", e);
+    }
+  }, []);
+
   useEffect(() => {
-    ref.current = load();
-    setState(ref.current);
+    // 1. Load locally first for instant display
+    const initial = load();
+    ref.current = initial;
+    setState(initial);
+
     const onStorage = (e: StorageEvent) => {
       if (e.key !== KEY) return;
       ref.current = e.newValue ? (JSON.parse(e.newValue) as State) : seedState();
       setState(ref.current);
     };
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
 
-  const update = useCallback(<R,>(fn: (draft: State) => R): R => {
-    const draft = structuredClone(ref.current!);
-    const out = fn(draft);
-    ref.current = draft;
-    save(draft);
-    setState(draft);
-    return out;
-  }, []);
+    // 2. If Supabase configured, load and subscribe to Realtime
+    if (isSupabaseConfigured()) {
+      (async () => {
+        try {
+          const { data, error } = await supabase
+            .from("wordgame_state")
+            .select("state")
+            .eq("id", "current")
+            .single();
+
+          if (!error && data?.state && (data.state as State)?.v === STATE_VERSION) {
+            const remoteState = data.state as State;
+            ref.current = remoteState;
+            save(remoteState);
+            setState(remoteState);
+            setIsCloudSynced(true);
+          } else {
+            // Row not found or old demo data version mismatch: push new clean production state to cloud
+            await supabase.from("wordgame_state").upsert({
+              id: "current",
+              state: initial,
+              version: initial.v,
+              updated_at: new Date().toISOString(),
+            });
+            setIsCloudSynced(true);
+          }
+        } catch (e) {
+          console.warn("Could not load from Supabase:", e);
+        }
+      })();
+
+      const channel = supabase
+        .channel("wordgame_realtime_sync")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "wordgame_state", filter: "id=eq.current" },
+          (payload: any) => {
+            const newState = payload.new?.state as State;
+            if (newState && newState.v === STATE_VERSION) {
+              ref.current = newState;
+              save(newState);
+              setState(newState);
+              setIsCloudSynced(true);
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        window.removeEventListener("storage", onStorage);
+        supabase.removeChannel(channel);
+      };
+    }
+
+    return () => window.removeEventListener("storage", onStorage);
+  }, [syncToCloud]);
+
+  const update = useCallback(
+    <R,>(fn: (draft: State) => R): R => {
+      const draft = structuredClone(ref.current!);
+      const out = fn(draft);
+      ref.current = draft;
+      save(draft);
+      setState(draft);
+      syncToCloud(draft);
+      return out;
+    },
+    [syncToCloud]
+  );
 
   const attempt = useCallback(
     <R,>(fn: (draft: State) => R) => {
@@ -75,16 +154,22 @@ export function StoreProvider({ children, fallback = null }: { children: React.R
         throw e;
       }
     },
-    [update],
+    [update]
   );
 
   const reset = useCallback(() => {
-    ref.current = seedState();
-    save(ref.current);
-    setState(ref.current);
-  }, []);
+    const s = seedState();
+    ref.current = s;
+    save(s);
+    setState(s);
+    syncToCloud(s);
+  }, [syncToCloud]);
 
-  const value = useMemo(() => (state ? { state, update, attempt, reset } : null), [state, update, attempt, reset]);
+  const value = useMemo(
+    () => (state ? { state, update, attempt, reset, isCloudSynced } : null),
+    [state, update, attempt, reset, isCloudSynced]
+  );
+
   if (!value) return <>{fallback}</>;
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -104,3 +189,4 @@ export function useNow(ms = 30000) {
   }, [ms]);
   return now;
 }
+

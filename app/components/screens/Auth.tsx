@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Lock, MessageCircle, Smartphone, User } from "lucide-react";
 import { loginUser, registerUser } from "../../lib/engine";
-import { DEMO_LOGIN } from "../../lib/seed";
 import { useStore } from "../../lib/store";
 import { Logo } from "../Logo";
 import { IconField, whatsappLink } from "../ui";
@@ -50,11 +49,6 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
       <a href={whatsappLink(state.settings.contact.whatsapp)} target="_blank" rel="noreferrer" className="mx-auto mt-7 flex items-center gap-2 bg-white rounded-full px-7 py-3 shadow-md font-bold text-[#13306f]">
         <MessageCircle size={20} className="text-emerald-500" /> ADMIN
       </a>
-      {mode === "login" && (
-        <button onClick={() => { setMobile(DEMO_LOGIN.mobile); setPassword(DEMO_LOGIN.password); }} className="mt-auto pt-8 text-xs text-white/60 underline decoration-dashed">
-          Demo login: {DEMO_LOGIN.mobile} / {DEMO_LOGIN.password} (tap to fill)
-        </button>
-      )}
     </div>
   );
 }

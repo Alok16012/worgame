@@ -111,7 +111,7 @@ export const PAY_METHODS: PayMethod[] = ["PhonePe", "Google Pay", "Paytm", "UPI 
 export interface Notice { id: number; title: string; msg: string; target: string; userId?: number | null; date: string; time: string }
 export interface Push { id: number; title: string; msg: string; target: string; sent: number; date: string; time: string }
 export interface Role { id: number; name: string; perms: string[] }
-export interface AdminUser { id: number; name: string; username: string; role: string; active: boolean }
+export interface AdminUser { id: number; name: string; username: string; password?: string; role: string; active: boolean }
 export interface Audit { id: number; at: string; by: string; action: string; detail: string }
 /** Home banner: an uploaded image (`img`, data URL) or a gradient with text. */
 export interface Slider { id: number; title: string; sub: string; c1: string; c2: string; img?: string }
