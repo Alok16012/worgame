@@ -5,9 +5,15 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "cap:sync": "next build && npx cap sync android",
+    "build:apk": "npm run cap:sync && cd android && ./gradlew assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../release-builds/ShriKalyan.apk",
+    "build:aab": "npm run cap:sync && cd android && ./gradlew bundleRelease && cp app/build/outputs/bundle/release/app-release.aab ../release-builds/ShriKalyan.aab"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
     "@supabase/supabase-js": "^2.117.2",
     "lucide-react": "^1.48.0",
     "next": "16.2.6",
