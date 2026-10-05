@@ -17,7 +17,10 @@ export type Route =
   | { name: "howto" }
   | { name: "notices" }
   | { name: "profile" }
-  | { name: "contact" };
+  | { name: "contact" }
+  | { name: "quiz"; gameId?: number; title?: string }
+  | { name: "submitIdea" }
+  | { name: "quizRules" };
 
 export interface Nav {
   push: (r: Route) => void;

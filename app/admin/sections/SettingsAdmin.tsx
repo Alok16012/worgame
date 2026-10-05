@@ -34,41 +34,74 @@ function Switch({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
 type NumKey = "minDeposit" | "maxDeposit" | "minWithdraw" | "maxWithdraw" | "minBid" | "maxBid" | "welcomeBonus";
 
 export function MainSetting() {
-  const { f, setF, save } = useSettingsForm(["appName", "marquee", "website", "upiId", "version", "minDeposit", "maxDeposit", "minWithdraw", "maxWithdraw", "minBid", "maxBid", "welcomeBonus", "autoUpi", "demoMode", "maintenance", "otpApiKey", "otpEnabled"]);
+  const { f, setF, save } = useSettingsForm(["appName", "marquee", "website", "upiId", "version", "minDeposit", "maxDeposit", "minWithdraw", "maxWithdraw", "minBid", "maxBid", "welcomeBonus", "autoUpi", "demoMode", "maintenance", "otpApiKey", "otpEnabled", "bettingDisabled", "quizTitle", "quizTimeLimit"]);
   const num = (k: NumKey, label: string) => <Field label={label}><input className="admin-input" inputMode="numeric" value={f[k]} onChange={(e) => setF({ ...f, [k]: Number(e.target.value.replace(/\D/g, "")) })} /></Field>;
-  const text = (k: "appName" | "marquee" | "website" | "upiId" | "version", label: string) => <Field label={label}><input className="admin-input" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></Field>;
+  const text = (k: "appName" | "marquee" | "website" | "upiId" | "version" | "quizTitle", label: string) => <Field label={label}><input className="admin-input" value={f[k] || ""} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></Field>;
   return (
-    <Card title="Main Setting">
-      <div className="grid md:grid-cols-3 gap-4">
-        {text("appName", "App Name")}
-        {text("website", "Official Website")}
-        {text("upiId", "Merchant UPI ID")}
-        <Field label="Welcome Marquee" className="md:col-span-3"><input className="admin-input" value={f.marquee} onChange={(e) => setF({ ...f, marquee: e.target.value })} /></Field>
-        {num("minDeposit", "Min Deposit")}
-        {num("maxDeposit", "Max Deposit")}
-        {num("welcomeBonus", "Welcome Bonus")}
-        {num("minWithdraw", "Min Withdraw")}
-        {num("maxWithdraw", "Max Withdraw")}
-        {text("version", "App Version")}
-        {num("minBid", "Min Bid Amount")}
-        {num("maxBid", "Max Bid Amount")}
-        <Field label="2Factor.in SMS API Key (4-Digit OTP)" className="md:col-span-3">
-          <input
-            className="admin-input font-mono"
-            placeholder="e.g. a0cb5b35-bdb3-425b-a648-2a0561771322"
-            value={f.otpApiKey || ""}
-            onChange={(e) => setF({ ...f, otpApiKey: e.target.value.trim() })}
-          />
-        </Field>
+    <>
+      <div className={`p-4 rounded-xl mb-5 border-2 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${f.bettingDisabled ? "bg-amber-50 border-amber-300 text-amber-900" : "bg-emerald-50 border-emerald-300 text-emerald-900"}`}>
+        <div>
+          <div className="flex items-center gap-2 font-bold text-base">
+            <span className={`w-3 h-3 rounded-full animate-ping ${f.bettingDisabled ? "bg-amber-500" : "bg-emerald-500"}`} />
+            <span>App Mode: {f.bettingDisabled ? "🟡 Educational Quiz Mode (Play Store Safe)" : "🟢 Betting Mode (Active)"}</span>
+          </div>
+          <p className="text-xs mt-1 text-slate-600 max-w-xl">
+            {f.bettingDisabled
+              ? "All betting, wallet, deposit, withdraw, and bid screens are HIDDEN from players. The app functions as an Educational Market Quiz App with Play Quiz buttons and Idea submissions compliant with Google Play Store standards."
+              : "All Matka game types, bidding, wallet transactions, deposit, and withdraw features are active in the player app."}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setF({ ...f, bettingDisabled: !f.bettingDisabled })}
+          className={`px-5 py-2.5 rounded-xl font-bold text-sm text-white shadow-md transition active:scale-95 shrink-0 ${f.bettingDisabled ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"}`}
+        >
+          {f.bettingDisabled ? "Switch to Betting Mode (ON)" : "Switch to Educational Quiz Mode (Safe)"}
+        </button>
       </div>
-      <div className="grid md:grid-cols-2 gap-3 mt-5">
-        <Switch on={f.autoUpi} onChange={(v) => setF({ ...f, autoUpi: v })} label="Auto UPI Payment" hint="ON: Add Fund opens PhonePe / Google Pay / Paytm and credits the wallet. OFF: players send an Add Fund request that you approve in Fund Management." />
-        <Switch on={f.otpEnabled ?? true} onChange={(v) => setF({ ...f, otpEnabled: v })} label="4-Digit OTP Verification" hint="Require players to verify 4-digit SMS OTP on registration and forgot password." />
-        <Switch on={f.demoMode} onChange={(v) => setF({ ...f, demoMode: v })} label="Demo mode" hint="Ignore the withdraw time window. Market OPEN/CLOSE timings always apply." />
-        <Switch on={f.maintenance} onChange={(v) => setF({ ...f, maintenance: v })} label="Maintenance mode" hint="Player app shows 'under maintenance'." />
-      </div>
-      <Btn className="mt-5" onClick={() => save("Main Setting", (v) => (!v.appName.trim() ? "App name is required" : v.minBid < 1 || v.minBid > v.maxBid ? "Check min/max bid" : v.minDeposit > v.maxDeposit ? "Check min/max deposit" : v.minWithdraw > v.maxWithdraw ? "Check min/max withdraw" : null))}>Update</Btn>
-    </Card>
+
+      <Card title="Main Setting">
+        <div className="grid md:grid-cols-3 gap-4">
+          {text("appName", "App Name")}
+          {text("website", "Official Website")}
+          {text("upiId", "Merchant UPI ID")}
+          <Field label="Welcome Marquee" className="md:col-span-3"><input className="admin-input" value={f.marquee} onChange={(e) => setF({ ...f, marquee: e.target.value })} /></Field>
+          {num("minDeposit", "Min Deposit")}
+          {num("maxDeposit", "Max Deposit")}
+          {num("welcomeBonus", "Welcome Bonus")}
+          {num("minWithdraw", "Min Withdraw")}
+          {num("maxWithdraw", "Max Withdraw")}
+          {text("version", "App Version")}
+          {num("minBid", "Min Bid Amount")}
+          {num("maxBid", "Max Bid Amount")}
+          <Field label="2Factor.in SMS API Key (4-Digit OTP)" className="md:col-span-3">
+            <input
+              className="admin-input font-mono"
+              placeholder="e.g. a0cb5b35-bdb3-425b-a648-2a0561771322"
+              value={f.otpApiKey || ""}
+              onChange={(e) => setF({ ...f, otpApiKey: e.target.value.trim() })}
+            />
+          </Field>
+          {text("quizTitle", "Quiz Title (Quiz Mode)")}
+          <Field label="Quiz Time Limit (Seconds)">
+            <input
+              className="admin-input"
+              inputMode="numeric"
+              value={f.quizTimeLimit || 90}
+              onChange={(e) => setF({ ...f, quizTimeLimit: Number(e.target.value.replace(/\D/g, "")) || 90 })}
+            />
+          </Field>
+        </div>
+        <div className="grid md:grid-cols-2 gap-3 mt-5">
+          <Switch on={!f.bettingDisabled} onChange={(v) => setF({ ...f, bettingDisabled: !v })} label="Betting Enabled" hint="ON: Normal betting app. OFF: Educational Quiz safe mode for Play Store (hides all wallet & betting cues)." />
+          <Switch on={f.autoUpi} onChange={(v) => setF({ ...f, autoUpi: v })} label="Auto UPI Payment" hint="ON: Add Fund opens PhonePe / Google Pay / Paytm and credits the wallet. OFF: players send an Add Fund request that you approve in Fund Management." />
+          <Switch on={f.otpEnabled ?? true} onChange={(v) => setF({ ...f, otpEnabled: v })} label="4-Digit OTP Verification" hint="Require players to verify 4-digit SMS OTP on registration and forgot password." />
+          <Switch on={f.demoMode} onChange={(v) => setF({ ...f, demoMode: v })} label="Demo mode" hint="Ignore the withdraw time window. Market OPEN/CLOSE timings always apply." />
+          <Switch on={f.maintenance} onChange={(v) => setF({ ...f, maintenance: v })} label="Maintenance mode" hint="Player app shows 'under maintenance'." />
+        </div>
+        <Btn className="mt-5" onClick={() => save("Main Setting", (v) => (!v.appName.trim() ? "App name is required" : v.minBid < 1 || v.minBid > v.maxBid ? "Check min/max bid" : v.minDeposit > v.maxDeposit ? "Check min/max deposit" : v.minWithdraw > v.maxWithdraw ? "Check min/max withdraw" : null))}>Update</Btn>
+      </Card>
+    </>
   );
 }
 
@@ -169,6 +202,65 @@ export function WithdrawDays() {
       </div>
       <Btn className="mt-5" onClick={() => save("Withdraw Day Option", (v) => (v.withdraw.from >= v.withdraw.to ? "Close time must be after open time" : null))}>Update</Btn>
       <p className="text-sm text-slate-500 mt-4">Withdraw is currently <b>{withdrawOpen(s) ? "open" : "closed"}</b> for players{s.settings.demoMode ? " (time window ignored in demo mode)" : ""}.</p>
+    </Card>
+  );
+}
+
+export function SubmittedIdeas() {
+  const { state: s, update } = useStore();
+  const { toast } = useAdmin();
+  const ideas = (s.ideas || []).slice().reverse();
+
+  const remove = (id: number) => {
+    update((d) => {
+      d.ideas = (d.ideas || []).filter((x) => x.id !== id);
+    });
+    toast("Idea deleted", "ok");
+  };
+
+  return (
+    <Card title={`Submitted Ideas & Quiz Suggestions (${ideas.length})`}>
+      <p className="text-xs text-slate-500 mb-4">
+        Notes and quiz suggestions submitted by app users via the <b>Submit Idea</b> screen.
+      </p>
+      {ideas.length === 0 ? (
+        <div className="text-sm text-slate-400 py-6 text-center">
+          No ideas submitted yet. Submissions from the player app will appear here.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {ideas.map((idea) => (
+            <div
+              key={idea.id}
+              className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-3"
+            >
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-800 text-sm">{idea.userName}</span>
+                  <span className="text-xs text-slate-500">({idea.userMobile || "No phone"})</span>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-semibold text-[11px]">
+                    {idea.category || "Suggestion"}
+                  </span>
+                </div>
+                <div className="text-sm text-slate-700 whitespace-pre-wrap font-medium">
+                  {idea.note}
+                </div>
+                <div className="text-xs text-slate-400">
+                  Submitted on {idea.date} at {idea.time}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => remove(idea.id)}
+                className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg self-end md:self-center transition"
+                title="Delete Submission"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </Card>
   );
 }

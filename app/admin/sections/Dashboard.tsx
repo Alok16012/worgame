@@ -7,12 +7,26 @@ import { fmtDate, fmtTime, inr, sum, ymd } from "../../lib/format";
 import { useStore } from "../../lib/store";
 import type { Bid, Session, Txn } from "../../lib/types";
 import { bidTypeLabel, GameSelect } from "../common";
-import { ANK_COLORS, BidBadge, Btn, Card, DataTable, Field, Modal, Table } from "../ui";
+import { ANK_COLORS, BidBadge, Btn, Card, DataTable, Field, Modal, Table, useAdmin } from "../ui";
 
 export function Dashboard({ go }: { go: (r: string) => void }) {
-  const { state: s } = useStore();
+  const { state: s, update } = useStore();
+  const { toast } = useAdmin();
   const t = ymd();
   const active = s.users.filter((u) => u.status === "active").length;
+  const quizMode = s.settings.bettingDisabled;
+
+  const toggleBettingMode = () => {
+    update((d) => {
+      d.settings.bettingDisabled = !d.settings.bettingDisabled;
+    });
+    toast(
+      !quizMode
+        ? "Switched to Educational Quiz Safe Mode (Play Store Safe)"
+        : "Switched to Betting Mode (Full Matka Game)",
+      "ok"
+    );
+  };
 
   // "Total Bids On Single Ank" — Single Ank bids of today, optionally one market / one session.
   const [draft, setDraft] = useState<{ game: number | ""; session: Session | "" }>({ game: "", session: "" });
@@ -44,7 +58,38 @@ export function Dashboard({ go }: { go: (r: string) => void }) {
 
   return (
     <>
-      <h1 className="text-sm font-semibold tracking-wider text-slate-600 mb-4">DASHBOARD</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <h1 className="text-sm font-semibold tracking-wider text-slate-600">DASHBOARD</h1>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 font-medium">App State:</span>
+          <button
+            onClick={toggleBettingMode}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition active:scale-95 flex items-center gap-1.5 ${
+              quizMode
+                ? "bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200"
+                : "bg-emerald-100 text-emerald-900 border border-emerald-300 hover:bg-emerald-200"
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${quizMode ? "bg-amber-500" : "bg-emerald-500"}`} />
+            {quizMode ? "Educational Quiz Mode (Safe)" : "Betting Mode (Active)"}
+          </button>
+        </div>
+      </div>
+
+      {quizMode && (
+        <div className="mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-3">
+          <div>
+            <b>⚠️ Educational Quiz Safe Mode is Active:</b> All betting, wallet balance, and deposit/withdraw functions are hidden in the player app. Players see market charts, timings, educational quizzes, and idea submissions.
+          </div>
+          <button
+            onClick={toggleBettingMode}
+            className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold shrink-0 shadow-sm"
+          >
+            Turn Betting ON
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {kpis.map((k) => (
           <button key={k.l} onClick={() => go(k.to)} className="relative overflow-hidden text-left rounded-2xl p-5 text-white hover:brightness-110 transition" style={{ background: k.bg }}>
@@ -106,6 +151,25 @@ export function Dashboard({ go }: { go: (r: string) => void }) {
             </tbody>
           </table>
         </div>
+
+        <div className="flex items-center justify-between mt-8 mb-3">
+          <h3 className="text-xl font-semibold">Recently Registered Users</h3>
+          <Btn variant="dark" onClick={() => go("users")}>View All Users ({s.users.length})</Btn>
+        </div>
+        <DataTable
+          head={["#", "Name", "Mobile", "Status", "Betting", "Wallet Balance", "Registered At", "Action"]}
+          rows={s.users.slice().reverse().slice(0, 10).map((u, i) => [
+            i + 1,
+            <button key="n" className="text-left font-semibold hover:text-[#0d6efd]" onClick={() => go(`users/${u.id}`)}>{u.name}</button>,
+            u.mobile,
+            <span key="s" className={u.status === "active" ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>{u.status === "active" ? "Active" : "Inactive"}</span>,
+            u.betting ? "Yes" : "No",
+            inr(u.balance),
+            u.joined,
+            <Btn key="a" size="sm" onClick={() => go(`users/${u.id}`)}>Profile</Btn>,
+          ])}
+          text={s.users.map((u) => `${u.name} ${u.mobile}`)}
+        />
 
         <h3 className="text-xl font-semibold mt-8 mb-3">Auto Fund Deposit</h3>
         <DataTable head={["#", "User Name", "Mobile", "Amount", "UPI App", "Date"]}

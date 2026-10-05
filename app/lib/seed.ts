@@ -67,6 +67,7 @@ export function seedState(): State {
     roles: [],
     admins: [],
     audit: [],
+    ideas: [],
     settings: {
       appName: "Shri Kalyan",
       marquee: "WELCOME TO SHRI KALYAN • Fast Results • 24x7 Instant Deposit & Withdrawal",
@@ -82,6 +83,9 @@ export function seedState(): State {
       autoUpi: true,
       otpApiKey: "a0cb5b35-bdb3-425b-a648-2a0561771322",
       otpEnabled: true,
+      bettingDisabled: false,
+      quizTitle: "Market Educational Quiz",
+      quizTimeLimit: 90,
       demoMode: false, // Real live mode
       maintenance: false,
       version: "1.0.0",

@@ -15,7 +15,7 @@ import { BidRevert } from "./sections/Revert";
 import { GameNames, GameNumbers, GameRates } from "./sections/Games";
 import { BidHistory, CustomerSell } from "./sections/Reports";
 import { PushNotification, SendNotice } from "./sections/Notices";
-import { ContactSetting, HowToPlaySetting, MainSetting, SliderImages, WithdrawDays } from "./sections/SettingsAdmin";
+import { ContactSetting, HowToPlaySetting, MainSetting, SliderImages, SubmittedIdeas, WithdrawDays } from "./sections/SettingsAdmin";
 
 // Admin panel modelled on the live Sara777 panel: same menu tree, page names and flows.
 // Routes live in the URL hash (#declare/starline, #users/1001) so refresh keeps your place.
@@ -39,7 +39,7 @@ const NAV: Item[] = [
   { id: "prediction", label: "Prediction", icon: <BarChart3 size={18} /> },
   { group: "Management", icon: <Users size={18} />, items: [{ id: "roles", label: "Role" }, { id: "users", label: "Users" }] },
   { group: "Wallet Management", icon: <Wallet size={18} />, items: [{ id: "fund", label: "Fund Management" }, { id: "withdraw", label: "Withdraw Management" }, { id: "autodeposit", label: "Auto Deposit History" }, { id: "revert/main", label: "Bid Revert" }] },
-  { group: "Setting", icon: <SettingsIcon size={18} />, items: [{ id: "settings", label: "Main Setting" }, { id: "contact", label: "Contact Setting" }, { id: "howtoplay", label: "How To Play" }, { id: "slider", label: "Slider Image" }, { id: "withdrawdays", label: "Withdraw Day Option" }] },
+  { group: "Setting", icon: <SettingsIcon size={18} />, items: [{ id: "settings", label: "Main Setting" }, { id: "ideas", label: "Submitted Ideas" }, { id: "contact", label: "Contact Setting" }, { id: "howtoplay", label: "How To Play" }, { id: "slider", label: "Slider Image" }, { id: "withdrawdays", label: "Withdraw Day Option" }] },
   { group: "Notice Management", icon: <Megaphone size={18} />, items: [{ id: "notice", label: "Send Notice" }, { id: "push", label: "Push Notification" }] },
   { group: "Report Managment", icon: <FileText size={18} />, items: [{ id: "bids", label: "Bid History Report" }, { id: "sell", label: "Customer Sell Report" }] },
   { group: "Game Managment", icon: <Dices size={18} />, items: catItems("main") },
@@ -49,7 +49,7 @@ const NAV: Item[] = [
 
 const CRUMB: Record<string, string> = {
   dashboard: "Dashboard", declare: "Result Declared", prediction: "Prediction", roles: "Role", users: "Users", fund: "Fund Management",
-  withdraw: "Withdraw Management", autodeposit: "Auto Deposit History", revert: "Bid Revert", settings: "Main Setting", contact: "Contact Setting",
+  withdraw: "Withdraw Management", autodeposit: "Auto Deposit History", revert: "Bid Revert", settings: "Main Setting", ideas: "Submitted Ideas", contact: "Contact Setting",
   howtoplay: "How To Play", slider: "Slider Image", withdrawdays: "Withdraw Day Option", notice: "Send Notice",
   push: "Push Notification", bids: "Bid History", sell: "Customer Sell Report", games: "Game Name", rates: "Game Rates", numbers: "Game Numbers",
 };
@@ -77,13 +77,19 @@ export function Logo({ name }: { name: string }) {
 const isOn = (route: string, id: string) => route === id || route.startsWith(`${id}/`);
 
 function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () => void }) {
-  const { state, reset } = useStore();
+  const { state, reset, update } = useStore();
   const { confirm, toast } = useAdmin();
   const [route, go] = useHashRoute();
   const [drawer, setDrawer] = useState(false);
   const [open, setOpen] = useState<Set<string>>(new Set(["Management", "Wallet Management"]));
   const [page, arg] = route.split("/") as [string, string | undefined];
   const cat = (["main", "starline", "gali"].includes(arg ?? "") ? arg : "main") as Cat;
+  const quizMode = state.settings.bettingDisabled;
+
+  const toggleBetting = () => {
+    update((d) => { d.settings.bettingDisabled = !d.settings.bettingDisabled; });
+    toast(!quizMode ? "Switched to Educational Quiz Safe Mode (Play Store Safe)" : "Switched to Betting Mode (Full Matka Game)", "ok");
+  };
 
   useEffect(() => {
     const g = NAV.find((n) => "group" in n && n.items.some((i) => isOn(route, i.id)));
@@ -103,6 +109,7 @@ function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () =
     case "autodeposit": body = <AutoDeposit />; break;
     case "revert": body = <BidRevert key={cat} cat={cat} />; break;
     case "settings": body = <MainSetting />; break;
+    case "ideas": body = <SubmittedIdeas />; break;
     case "contact": body = <ContactSetting />; break;
     case "howtoplay": body = <HowToPlaySetting />; break;
     case "slider": body = <SliderImages />; break;
@@ -132,6 +139,18 @@ function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () =
         <button className="text-white/80 p-1.5 lg:hidden" onClick={() => setDrawer(true)} aria-label="Menu"><Menu size={22} /></button>
         <Logo name={state.settings.appName} />
         <button onClick={() => nav("dashboard")} className="hidden sm:inline-flex items-center gap-2 bg-[#f5b301] text-white font-medium px-4 py-2 rounded-md ml-2"><Home size={16} /> View Dashboard</button>
+        <button
+          onClick={toggleBetting}
+          className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-bold text-xs shadow transition active:scale-95 ml-2 ${
+            quizMode
+              ? "bg-amber-400/20 text-amber-300 border border-amber-400/40 hover:bg-amber-400/30"
+              : "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 hover:bg-emerald-500/30"
+          }`}
+          title="Click to toggle between Betting Mode and Play Store Safe Educational Quiz Mode"
+        >
+          <span className={`w-2 h-2 rounded-full ${quizMode ? "bg-amber-400" : "bg-emerald-400"}`} />
+          {quizMode ? "Quiz Mode (Safe)" : "Betting Mode (Active)"}
+        </button>
         <div className="flex-1" />
         <a href="/" target="_blank" className="hidden md:inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm"><Smartphone size={16} /> Player App</a>
         <button onClick={resetData} className="inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm px-2" title="Reset system data"><RotateCcw size={16} /><span className="hidden md:inline">Reset</span></button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Banknote, Bell, BookOpen, Gamepad2, History, Home as HomeIcon, Landmark, LogOut, Percent, Phone, ReceiptText, Share2, Trophy, User as UserIcon, Wallet, Wrench } from "lucide-react";
+import { Award, Banknote, Bell, BookOpen, Gamepad2, History, Home as HomeIcon, Landmark, Lightbulb, LogOut, Percent, Phone, Play, ReceiptText, Share2, Star, Trophy, User as UserIcon, Wallet, Wrench } from "lucide-react";
 import { findUser } from "../lib/engine";
 import { StoreProvider, useStore } from "../lib/store";
 import { SessionCtx, Toast, useSession } from "./ui";
@@ -12,14 +12,17 @@ import { Chart, Home, MarketList } from "./screens/Home";
 import { BetScreen, GameTypes } from "./screens/Play";
 import { BankDetails, Deposit, Withdraw, WithdrawHistory } from "./screens/Funds";
 import { BidHistory, Contact, GameRatesScreen, HowToPlay, Notices, Profile, Statement, WinHistory } from "./screens/Account";
+import { QuizInstructions, QuizSection, SubmitIdea } from "./screens/Quiz";
 
 const SESSION_KEY = "wg_session";
 
 function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
   const { state } = useStore();
   const { user: u } = useSession();
+  const quizMode = state.settings.bettingDisabled;
   const go = (r: Route) => { onClose(); nav.push(r); };
-  const items: [React.ReactNode, string, () => void][] = [
+
+  const bettingItems: [React.ReactNode, string, () => void][] = [
     [<HomeIcon key="i" size={19} />, "Home", () => { onClose(); nav.reset({ name: "home" }); }],
     [<UserIcon key="i" size={19} />, "My Profile", () => go({ name: "profile" })],
     [<Wallet key="i" size={19} />, "Deposit Fund", () => go({ name: "deposit" })],
@@ -36,21 +39,39 @@ function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
     [<Phone key="i" size={19} />, "Contact Us", () => go({ name: "contact" })],
     [<Share2 key="i" size={19} />, "Share App", () => { onClose(); navigator.share?.({ title: state.settings.appName, url: location.origin }).catch(() => {}); }],
   ];
+
+  const quizItems: [React.ReactNode, string, () => void][] = [
+    [<HomeIcon key="i" size={19} />, "Home", () => { onClose(); nav.reset({ name: "home" }); }],
+    [<Play key="i" size={19} />, "Play Daily Quiz", () => go({ name: "quiz", title: "Daily Market Quiz" })],
+    [<Lightbulb key="i" size={19} />, "Submit Idea", () => go({ name: "submitIdea" })],
+    [<Star key="i" size={19} />, "Starline Quiz", () => go({ name: "list", cat: "starline" })],
+    [<Gamepad2 key="i" size={19} />, "Gali Desawar Quiz", () => go({ name: "list", cat: "gali" })],
+    [<BookOpen key="i" size={19} />, "Quiz Guidelines", () => go({ name: "quizRules" })],
+    [<UserIcon key="i" size={19} />, "My Profile", () => go({ name: "profile" })],
+    [<Bell key="i" size={19} />, "Notifications", () => go({ name: "notices" })],
+    [<Phone key="i" size={19} />, "Contact Us", () => go({ name: "contact" })],
+    [<Share2 key="i" size={19} />, "Share App", () => { onClose(); navigator.share?.({ title: state.settings.appName, url: location.origin }).catch(() => {}); }],
+  ];
+
+  const items = quizMode ? quizItems : bettingItems;
+
   return (
     <div className="fixed inset-0 z-50 flex justify-center">
       <div className="absolute inset-0 bg-black/50 fadein" onClick={onClose} />
       <div className="relative w-full max-w-[430px] h-full pointer-events-none">
-        <aside className="slidein pointer-events-auto absolute left-0 top-0 h-full w-[78%] bg-white overflow-y-auto no-scrollbar">
+        <aside className="slidein pointer-events-auto absolute left-0 top-0 h-full w-[78%] bg-white overflow-y-auto no-scrollbar shadow-2xl">
           <div className="px-5 pb-5 text-white" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 24px)", background: "radial-gradient(100% 80% at 50% 0%, #23489f, #0b1d4f)" }}>
             <div className="flex justify-center mb-4"><Logo size={26} /></div>
             <div className="font-bold text-lg">{u?.name}</div>
-            <div className="text-sm opacity-80">{u?.mobile} · ₹{u?.balance.toLocaleString("en-IN")}</div>
+            <div className="text-sm opacity-80">
+              {quizMode ? `${u?.mobile} · 🎓 Quiz Player` : `${u?.mobile} · ₹${u?.balance.toLocaleString("en-IN")}`}
+            </div>
           </div>
           <div className="py-2">
             {items.map(([icon, label, fn]) => (
-              <button key={label} onClick={fn} className="w-full flex items-center gap-4 px-5 py-3 text-[15px] text-slate-700 active:bg-slate-100"><span className="text-[#13306f]">{icon}</span>{label}</button>
+              <button key={label} onClick={fn} className="w-full flex items-center gap-4 px-5 py-3 text-[15px] text-slate-700 active:bg-slate-100 transition"><span className="text-[#13306f]">{icon}</span>{label}</button>
             ))}
-            <button onClick={() => { onClose(); nav.logout(); }} className="w-full flex items-center gap-4 px-5 py-3 text-[15px] text-rose-600"><LogOut size={19} /> Logout</button>
+            <button onClick={() => { onClose(); nav.logout(); }} className="w-full flex items-center gap-4 px-5 py-3 text-[15px] text-rose-600 active:bg-rose-50 transition"><LogOut size={19} /> Logout</button>
           </div>
           <div className="text-center text-xs text-slate-400 pb-6">Version {state.settings.version}</div>
         </aside>
@@ -111,25 +132,50 @@ function Shell() {
   if (splash) return <Splash onDone={() => setSplash(false)} />;
   if (!uid || !user) return <><Auth onSignedIn={(id) => { signIn(id); showToast("Login successful!"); }} toast={showToast} /><Toast msg={toast} /></>;
 
+  const quizMode = state.settings.bettingDisabled;
   let screen: React.ReactNode;
   switch (route.name) {
     case "home": screen = <Home nav={nav} openMenu={() => setDrawer(true)} />; break;
     case "list": screen = <MarketList nav={nav} cat={route.cat} />; break;
-    case "market": screen = <GameTypes nav={nav} gameId={route.gameId} />; break;
-    case "bet": screen = <BetScreen key={route.type} nav={nav} gameId={route.gameId} type={route.type} />; break;
+    case "quiz": screen = <QuizSection nav={nav} gameId={route.gameId} title={route.title} />; break;
+    case "submitIdea": screen = <SubmitIdea nav={nav} />; break;
+    case "quizRules": screen = <QuizInstructions nav={nav} />; break;
     case "chart": screen = <Chart nav={nav} gameId={route.gameId} />; break;
-    case "deposit": screen = <Deposit nav={nav} />; break;
-    case "withdraw": screen = <Withdraw nav={nav} />; break;
-    case "bank": screen = <BankDetails nav={nav} />; break;
-    case "withdrawHistory": screen = <WithdrawHistory nav={nav} />; break;
-    case "bids": screen = <BidHistory nav={nav} />; break;
-    case "wins": screen = <WinHistory nav={nav} />; break;
-    case "statement": screen = <Statement nav={nav} />; break;
-    case "rates": screen = <GameRatesScreen nav={nav} />; break;
-    case "howto": screen = <HowToPlay nav={nav} />; break;
+    case "market":
+      screen = quizMode ? <QuizSection nav={nav} gameId={route.gameId} /> : <GameTypes nav={nav} gameId={route.gameId} />;
+      break;
+    case "bet":
+      screen = quizMode ? <QuizSection nav={nav} gameId={route.gameId} /> : <BetScreen key={route.type} nav={nav} gameId={route.gameId} type={route.type} />;
+      break;
+    case "deposit":
+      screen = quizMode ? <Home nav={nav} openMenu={() => setDrawer(true)} /> : <Deposit nav={nav} />;
+      break;
+    case "withdraw":
+      screen = quizMode ? <Home nav={nav} openMenu={() => setDrawer(true)} /> : <Withdraw nav={nav} />;
+      break;
+    case "bank":
+      screen = quizMode ? <Home nav={nav} openMenu={() => setDrawer(true)} /> : <BankDetails nav={nav} />;
+      break;
+    case "withdrawHistory":
+      screen = quizMode ? <Home nav={nav} openMenu={() => setDrawer(true)} /> : <WithdrawHistory nav={nav} />;
+      break;
+    case "bids":
+      screen = quizMode ? <Home nav={nav} openMenu={() => setDrawer(true)} /> : <BidHistory nav={nav} />;
+      break;
+    case "wins":
+      screen = quizMode ? <Home nav={nav} openMenu={() => setDrawer(true)} /> : <WinHistory nav={nav} />;
+      break;
+    case "statement":
+      screen = quizMode ? <Home nav={nav} openMenu={() => setDrawer(true)} /> : <Statement nav={nav} />;
+      break;
+    case "rates":
+      screen = quizMode ? <QuizInstructions nav={nav} /> : <GameRatesScreen nav={nav} />;
+      break;
+    case "howto": screen = quizMode ? <QuizInstructions nav={nav} /> : <HowToPlay nav={nav} />; break;
     case "notices": screen = <Notices nav={nav} />; break;
     case "profile": screen = <Profile nav={nav} />; break;
     case "contact": screen = <Contact nav={nav} />; break;
+    default: screen = <Home nav={nav} openMenu={() => setDrawer(true)} />; break;
   }
 
   return (

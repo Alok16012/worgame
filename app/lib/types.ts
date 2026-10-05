@@ -124,6 +124,17 @@ export const MODULES = [
   "Games", "Starline", "Galidesawar", "Reports", "Notices", "Settings",
 ] as const;
 
+export interface UserIdea {
+  id: number;
+  userId?: number;
+  userName: string;
+  userMobile: string;
+  note: string;
+  category: string;
+  date: string;
+  time: string;
+}
+
 export interface Settings {
   appName: string;
   marquee: string;
@@ -140,6 +151,10 @@ export interface Settings {
   autoUpi: boolean;
   otpApiKey?: string;
   otpEnabled?: boolean;
+  /** ON: Normal Matka Betting App | OFF: Educational Quiz Safe Mode (Google Play Store compliant) */
+  bettingDisabled: boolean;
+  quizTitle?: string;
+  quizTimeLimit?: number; // In seconds (default 90)
   demoMode: boolean; // ignore the withdraw time window (market timings always apply)
   maintenance: boolean;
   version: string;
@@ -166,5 +181,7 @@ export interface State {
   roles: Role[];
   admins: AdminUser[];
   audit: Audit[];
+  ideas: UserIdea[];
   settings: Settings;
 }
+

@@ -20,38 +20,50 @@ function useClock() {
   return now;
 }
 
-/** Market card: white OPEN/CLOSE times, white name, gold result, green ▶ when open, red ▶ when closed. */
+/** Market card: white OPEN/CLOSE times, white name, gold result, green ▶ when open, red ▶ when closed. In Quiz Mode: displays 'Play Quiz' button! */
 export function MarketCard({ g, nav, now }: { g: Game; nav: Nav; now: Date }) {
   const { state } = useStore();
   const { toast } = useSession();
+  const quizMode = state.settings.bettingDisabled;
   const st = marketState(state, g, now);
   const holiday = isOffDay(g, now);
   const text = resultText(g.cat, displayResult(state, g, now));
+
   return (
-    <div className="rounded-xl overflow-hidden border border-white/10" style={{ background: "linear-gradient(180deg,#173a8c,#10296b)" }}>
+    <div className="rounded-xl overflow-hidden border border-white/10 shadow-md" style={{ background: "linear-gradient(180deg,#173a8c,#10296b)" }}>
       <div className="bg-[#0a1a48] text-white text-[11px] font-semibold px-3 py-1.5 flex justify-between tracking-wide">
         {g.cat === "main" ? <><span>OPEN : {fmtTime(g.open)}</span><span>CLOSE : {fmtTime(g.close)}</span></> : <><span>RESULT TIME</span><span>{fmtTime(g.close)}</span></>}
       </div>
       <div className="flex items-center gap-3 px-3 py-3">
-        <button onClick={() => nav.push({ name: "chart", gameId: g.id })} className="w-10 h-10 rounded-lg bg-white/10 grid place-items-center text-[#f5c542]" aria-label="Chart"><BarChart3 size={22} /></button>
+        <button onClick={() => nav.push({ name: "chart", gameId: g.id })} className="w-10 h-10 rounded-lg bg-white/10 grid place-items-center text-[#f5c542] hover:bg-white/20 transition" aria-label="Chart"><BarChart3 size={22} /></button>
         <div className="flex-1 text-center min-w-0">
           <div className="text-[15px] font-bold text-white truncate tracking-wide">{g.name}</div>
           {holiday ? <div className="inline-block mt-0.5 px-3 py-0.5 rounded-full bg-[#e11d2e]/90 text-white text-xs font-bold tracking-wider">HOLIDAY TODAY</div>
             : <div className="gold text-xl font-extrabold tracking-[2px]">{text}</div>}
         </div>
-        <button
-          onClick={() => (st.anyOk ? nav.push({ name: "market", gameId: g.id }) : toast(holiday ? `${g.name} is closed today (holiday)` : "Betting is closed for today", "bad"))}
-          className={`w-11 h-11 rounded-full grid place-items-center text-white shadow-lg ${st.anyOk ? "bg-[#22c55e]" : "bg-[#e11d2e]"}`} aria-label={st.anyOk ? "Play" : "Closed"}>
-          <Play size={20} fill="currentColor" className="ml-0.5" />
-        </button>
+        {quizMode ? (
+          <button
+            onClick={() => nav.push({ name: "quiz", gameId: g.id, title: `${g.name} Quiz` })}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold shadow-md hover:brightness-110 active:scale-95 transition flex items-center gap-1.5"
+            aria-label="Play Quiz"
+          >
+            <Play size={13} fill="currentColor" /> Play Quiz
+          </button>
+        ) : (
+          <button
+            onClick={() => (st.anyOk ? nav.push({ name: "market", gameId: g.id }) : toast(holiday ? `${g.name} is closed today (holiday)` : "Betting is closed for today", "bad"))}
+            className={`w-11 h-11 rounded-full grid place-items-center text-white shadow-lg ${st.anyOk ? "bg-[#22c55e]" : "bg-[#e11d2e]"}`} aria-label={st.anyOk ? "Play" : "Closed"}>
+            <Play size={20} fill="currentColor" className="ml-0.5" />
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
 function Pill({ icon, label, onClick, href }: { icon: React.ReactNode; label: string; onClick?: () => void; href?: string }) {
-  const cls = "flex items-center gap-2 rounded-full bg-white px-3 py-2.5 text-[#13306f] font-semibold text-sm shadow";
-  const body = <><span className="w-7 h-7 rounded-full bg-[#13306f] text-[#f5c542] grid place-items-center shrink-0">{icon}</span><span className="flex-1 text-center">{label}</span></>;
+  const cls = "flex items-center gap-2 rounded-full bg-white px-3 py-2.5 text-[#13306f] font-semibold text-sm shadow hover:bg-slate-50 transition";
+  const body = <><span className="w-7 h-7 rounded-full bg-[#13306f] text-[#f5c542] grid place-items-center shrink-0">{icon}</span><span className="flex-1 text-center truncate">{label}</span></>;
   return href ? <a href={href} target="_blank" rel="noreferrer" className={cls}>{body}</a> : <button onClick={onClick} className={cls}>{body}</button>;
 }
 
@@ -59,6 +71,7 @@ export function Home({ nav, openMenu }: { nav: Nav; openMenu: () => void }) {
   const { state } = useStore();
   const now = useClock();
   const s = state.settings;
+  const quizMode = s.bettingDisabled;
   const [slide, setSlide] = useState(0);
   useEffect(() => {
     if (s.sliders.length < 2) return;
@@ -66,29 +79,48 @@ export function Home({ nav, openMenu }: { nav: Nav; openMenu: () => void }) {
     return () => window.clearInterval(t);
   }, [s.sliders.length]);
   const b = s.sliders.length ? s.sliders[slide % s.sliders.length] : null;
-  const hindi = !!b && /[\u0900-\u097F]/.test(b.title); // Devanagari title, e.g. "शुभ लाभ"
+  const hindi = !quizMode && !!b && /[\u0900-\u097F]/.test(b.title); // Devanagari title
 
   return (
     <>
       <Header title={s.appName} onMenu={openMenu} brand />
-      <div className="marquee overflow-hidden whitespace-nowrap text-[#f5c542] font-semibold text-sm py-1.5 bg-black/20"><span>{s.marquee}</span></div>
+      <div className="marquee overflow-hidden whitespace-nowrap text-[#f5c542] font-semibold text-sm py-1.5 bg-black/20">
+        <span>{quizMode ? "WELCOME TO EDUCATIONAL QUIZ HUB • Test your market analysis with daily multiple choice quizzes & submit ideas!" : s.marquee}</span>
+      </div>
       <div className="px-3 pt-3 space-y-3">
         {b && (
-          <div className="relative rounded-xl overflow-hidden aspect-[2.2] px-5 py-5 flex flex-col justify-end border border-[#f5c542]/30" style={{ background: b.img ? `center / cover no-repeat url(${b.img})` : `linear-gradient(135deg,${b.c1},${b.c2})` }}>
+          <div className="relative rounded-xl overflow-hidden aspect-[2.2] px-5 py-5 flex flex-col justify-end border border-[#f5c542]/30 shadow-md" style={{ background: b.img ? `center / cover no-repeat url(${b.img})` : `linear-gradient(135deg,${b.c1},${b.c2})` }}>
             {!b.img && <>
-              <div className={`font-extrabold drop-shadow ${hindi ? "gold text-4xl" : "text-2xl text-white"}`} style={hindi ? { fontFamily: "var(--font-yatra)" } : undefined}>{b.title}{hindi && <span className="ml-2 text-2xl">🪔</span>}</div>
-              <div className="text-sm text-white/85">{b.sub}</div>
+              <div className={`font-extrabold drop-shadow ${hindi ? "gold text-4xl" : "text-2xl text-white"}`} style={hindi ? { fontFamily: "var(--font-yatra)" } : undefined}>
+                {quizMode ? "Educational Quiz Portal" : b.title}{hindi && <span className="ml-2 text-2xl">🪔</span>}
+              </div>
+              <div className="text-sm text-white/85">
+                {quizMode ? "Test knowledge • Free daily quizzes • Analytical learning" : b.sub}
+              </div>
             </>}
             <div className="absolute bottom-3 right-4 flex gap-1">{s.sliders.map((x, i) => <span key={x.id} className={`h-1.5 rounded-full ${i === slide % s.sliders.length ? "w-4 bg-white" : "w-1.5 bg-white/40"}`} />)}</div>
           </div>
         )}
         <div className="grid grid-cols-2 gap-3">
-          <Pill icon={<ArrowDownToLine size={15} />} label="Withdraw" onClick={() => nav.push({ name: "withdraw" })} />
-          <Pill icon={<PlusCircle size={15} />} label="Add Fund" onClick={() => nav.push({ name: "deposit" })} />
-          <Pill icon={<span className="text-[13px] font-bold">W</span>} label="WhatsApp" href={whatsappLink(s.contact.whatsapp)} />
-          <Pill icon={<Play size={13} fill="currentColor" />} label="Gali Disawar" onClick={() => nav.push({ name: "list", cat: "gali" })} />
-          <Pill icon={<Star size={15} />} label="Starline" onClick={() => nav.push({ name: "list", cat: "starline" })} />
-          <Pill icon={<Send size={14} />} label="Telegram" href={`https://t.me/${s.contact.telegram.replace("@", "")}`} />
+          {quizMode ? (
+            <>
+              <Pill icon={<Play size={15} fill="currentColor" />} label="Play Daily Quiz" onClick={() => nav.push({ name: "quiz", title: "Daily Market Quiz" })} />
+              <Pill icon={<PlusCircle size={15} />} label="Submit Idea" onClick={() => nav.push({ name: "submitIdea" })} />
+              <Pill icon={<Star size={15} />} label="Starline Quiz" onClick={() => nav.push({ name: "list", cat: "starline" })} />
+              <Pill icon={<BarChart3 size={15} />} label="Quiz Rules" onClick={() => nav.push({ name: "quizRules" })} />
+              <Pill icon={<span className="text-[13px] font-bold">W</span>} label="WhatsApp" href={whatsappLink(s.contact.whatsapp)} />
+              <Pill icon={<Send size={14} />} label="Telegram" href={`https://t.me/${s.contact.telegram.replace("@", "")}`} />
+            </>
+          ) : (
+            <>
+              <Pill icon={<ArrowDownToLine size={15} />} label="Withdraw" onClick={() => nav.push({ name: "withdraw" })} />
+              <Pill icon={<PlusCircle size={15} />} label="Add Fund" onClick={() => nav.push({ name: "deposit" })} />
+              <Pill icon={<span className="text-[13px] font-bold">W</span>} label="WhatsApp" href={whatsappLink(s.contact.whatsapp)} />
+              <Pill icon={<Play size={13} fill="currentColor" />} label="Gali Disawar" onClick={() => nav.push({ name: "list", cat: "gali" })} />
+              <Pill icon={<Star size={15} />} label="Starline" onClick={() => nav.push({ name: "list", cat: "starline" })} />
+              <Pill icon={<Send size={14} />} label="Telegram" href={`https://t.me/${s.contact.telegram.replace("@", "")}`} />
+            </>
+          )}
         </div>
         {state.games.filter((g) => g.cat === "main" && g.active).map((g) => <MarketCard key={g.id} g={g} nav={nav} now={now} />)}
       </div>
@@ -99,12 +131,15 @@ export function Home({ nav, openMenu }: { nav: Nav; openMenu: () => void }) {
 export function MarketList({ nav, cat }: { nav: Nav; cat: "starline" | "gali" }) {
   const { state } = useStore();
   const now = useClock();
+  const quizMode = state.settings.bettingDisabled;
   return (
     <>
       <Header title={cat === "starline" ? "Starline" : "Gali Disawar"} onBack={nav.back} />
       <div className="px-3 pt-3 space-y-3">
         <div className="rounded-xl px-4 py-3 text-sm text-white/80 bg-white/10">
-          {cat === "starline" ? "One result every hour. Play Single Digit and Panna — result like 123-6." : "Play Left Digit, Right Digit or Jodi. Result is a 2-digit jodi."}
+          {quizMode
+            ? cat === "starline" ? "Hourly quiz slots and result analytics." : "Explore Gali Desawar market timings and test your analysis."
+            : cat === "starline" ? "One result every hour. Play Single Digit and Panna — result like 123-6." : "Play Left Digit, Right Digit or Jodi. Result is a 2-digit jodi."}
         </div>
         {state.games.filter((g) => g.cat === cat && g.active).map((g) => <MarketCard key={g.id} g={g} nav={nav} now={now} />)}
       </div>

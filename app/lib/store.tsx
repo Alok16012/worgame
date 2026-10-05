@@ -23,12 +23,22 @@ interface Store {
 
 const Ctx = createContext<Store | null>(null);
 
+function normalize(s: State): State {
+  if (!s.ideas) s.ideas = [];
+  if (s.settings) {
+    if (s.settings.bettingDisabled === undefined) s.settings.bettingDisabled = false;
+    if (s.settings.quizTitle === undefined) s.settings.quizTitle = "Market Educational Quiz";
+    if (s.settings.quizTimeLimit === undefined) s.settings.quizTimeLimit = 90;
+  }
+  return s;
+}
+
 function load(): State {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const s = JSON.parse(raw) as State;
-      if (s?.v === STATE_VERSION && Array.isArray(s.users)) return s;
+      if (s?.v === STATE_VERSION && Array.isArray(s.users)) return normalize(s);
     }
   } catch {}
   const s = seedState();
