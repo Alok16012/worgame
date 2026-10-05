@@ -9,10 +9,12 @@ import { Logo } from "../Logo";
 import { IconField, whatsappLink } from "../ui";
 
 export function Splash({ onDone }: { onDone: () => void }) {
+  const { reloadFromCloud } = useStore();
   useEffect(() => {
+    reloadFromCloud().catch(() => {});
     const t = window.setTimeout(onDone, 1800);
     return () => window.clearTimeout(t);
-  }, [onDone]);
+  }, [onDone, reloadFromCloud]);
   return (
     <div className="min-h-dvh grid place-items-center page-blue">
       <div className="pop"><Logo size={52} boxed /></div>
@@ -21,7 +23,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
 }
 
 export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void; toast: (m: string, tone?: "ok" | "bad") => void }) {
-  const { state, attempt } = useStore();
+  const { state, attempt, reloadFromCloud } = useStore();
   const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -61,6 +63,9 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
     if (!/^[6-9]\d{9}$/.test(clean)) {
       return toast("Please enter a valid 10-digit mobile number", "bad");
     }
+
+    // Refresh state from cloud to ensure up-to-date user check
+    await reloadFromCloud();
 
     if (targetMode === "register") {
       if (!name.trim()) return toast("Please enter your full name", "bad");
@@ -161,10 +166,19 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
     }
   };
 
-  const handleLoginSubmit = () => {
+  const handleLoginSubmit = async () => {
     const clean = mobile.replace(/\D/g, "");
     if (!/^[6-9]\d{9}$/.test(clean)) return toast("Please enter a valid 10-digit mobile number", "bad");
     if (!password) return toast("Please enter your password", "bad");
+
+    // If user is not yet in local state, fetch latest cloud database first
+    if (!state.users.some((u) => u.mobile === clean)) {
+      const fresh = await reloadFromCloud();
+      if (!fresh?.users?.some((u) => u.mobile === clean) && !state.users.some((u) => u.mobile === clean)) {
+        return toast("Mobile number is not registered", "bad");
+      }
+    }
+
     const r = attempt((d) => loginUser(d, clean, password));
     if (!r.ok) return toast(r.error, "bad");
     onSignedIn(r.value);

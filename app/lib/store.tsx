@@ -18,6 +18,7 @@ interface Store {
   /** Like update, but catches GameError and returns { error } instead of throwing. */
   attempt: <R>(fn: (draft: State) => R) => { ok: true; value: R } | { ok: false; error: string };
   reset: () => void;
+  reloadFromCloud: () => Promise<State | null>;
   isCloudSynced: boolean;
 }
 
@@ -72,6 +73,29 @@ export function StoreProvider({ children, fallback = null }: { children: React.R
     }
   }, []);
 
+  const reloadFromCloud = useCallback(async (): Promise<State | null> => {
+    if (!isSupabaseConfigured()) return null;
+    try {
+      const { data, error } = await supabase
+        .from("wordgame_state")
+        .select("state")
+        .eq("id", "current")
+        .single();
+
+      if (!error && data?.state && Array.isArray((data.state as any).users)) {
+        const remoteState = normalize(data.state as State);
+        ref.current = remoteState;
+        save(remoteState);
+        setState(remoteState);
+        setIsCloudSynced(true);
+        return remoteState;
+      }
+    } catch (e) {
+      console.warn("Could not reload from Supabase:", e);
+    }
+    return null;
+  }, []);
+
   useEffect(() => {
     // 1. Load locally first for instant display
     const initial = load();
@@ -87,34 +111,7 @@ export function StoreProvider({ children, fallback = null }: { children: React.R
 
     // 2. If Supabase configured, load and subscribe to Realtime
     if (isSupabaseConfigured()) {
-      (async () => {
-        try {
-          const { data, error } = await supabase
-            .from("wordgame_state")
-            .select("state")
-            .eq("id", "current")
-            .single();
-
-          if (!error && data?.state && (data.state as State)?.v === STATE_VERSION) {
-            const remoteState = data.state as State;
-            ref.current = remoteState;
-            save(remoteState);
-            setState(remoteState);
-            setIsCloudSynced(true);
-          } else {
-            // Row not found or old demo data version mismatch: push new clean production state to cloud
-            await supabase.from("wordgame_state").upsert({
-              id: "current",
-              state: initial,
-              version: initial.v,
-              updated_at: new Date().toISOString(),
-            });
-            setIsCloudSynced(true);
-          }
-        } catch (e) {
-          console.warn("Could not load from Supabase:", e);
-        }
-      })();
+      reloadFromCloud();
 
       const channel = supabase
         .channel("wordgame_realtime_sync")
@@ -123,10 +120,11 @@ export function StoreProvider({ children, fallback = null }: { children: React.R
           { event: "*", schema: "public", table: "wordgame_state", filter: "id=eq.current" },
           (payload: any) => {
             const newState = payload.new?.state as State;
-            if (newState && newState.v === STATE_VERSION) {
-              ref.current = newState;
-              save(newState);
-              setState(newState);
+            if (newState && Array.isArray(newState.users)) {
+              const remoteState = normalize(newState);
+              ref.current = remoteState;
+              save(remoteState);
+              setState(remoteState);
               setIsCloudSynced(true);
             }
           }
@@ -140,7 +138,7 @@ export function StoreProvider({ children, fallback = null }: { children: React.R
     }
 
     return () => window.removeEventListener("storage", onStorage);
-  }, [syncToCloud]);
+  }, [reloadFromCloud]);
 
   const update = useCallback(
     <R,>(fn: (draft: State) => R): R => {
@@ -176,8 +174,8 @@ export function StoreProvider({ children, fallback = null }: { children: React.R
   }, [syncToCloud]);
 
   const value = useMemo(
-    () => (state ? { state, update, attempt, reset, isCloudSynced } : null),
-    [state, update, attempt, reset, isCloudSynced]
+    () => (state ? { state, update, attempt, reset, reloadFromCloud, isCloudSynced } : null),
+    [state, update, attempt, reset, reloadFromCloud, isCloudSynced]
   );
 
   if (!value) return <>{fallback}</>;
