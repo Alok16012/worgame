@@ -171,7 +171,7 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
   };
 
   return (
-    <div className="min-h-dvh px-6 pt-10 pb-8 flex flex-col page-blue">
+    <div className="min-h-dvh px-6 pb-8 flex flex-col page-blue" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 24px)" }}>
       {/* Top Header */}
       <div className="flex items-center justify-between">
         {isOtpStep || mode === "forgot" ? (

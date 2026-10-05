@@ -22,12 +22,16 @@ export const NAVY = "#13306f";
 export function Header({ title, onBack, onMenu, brand }: { title: string; onBack?: () => void; onMenu?: () => void; brand?: boolean }) {
   const { user } = useSession();
   return (
-    <div className="sticky top-0 z-20 flex items-center gap-3 px-4 h-14 bg-[#0d2463] border-b border-white/10 text-white">
-      {onBack && <button onClick={onBack} className="-ml-1" aria-label="Back"><ChevronLeft size={26} /></button>}
-      {onMenu && <button onClick={onMenu} className="-ml-1" aria-label="Menu"><Menu size={26} /></button>}
-      <div className="flex-1 min-w-0 truncate">{brand ? <Wordmark name={title} size={20} /> : <span className="text-[17px] font-semibold uppercase">{title}</span>}</div>
-      <div className="flex items-center gap-1.5 font-semibold"><Wallet size={19} className="text-[#f5c542]" />{user.balance.toLocaleString("en-IN")}</div>
-    </div>
+    <header className="sticky top-0 z-20 bg-[#0d2463] border-b border-white/10 text-white select-none">
+      <div style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+        <div className="flex items-center gap-3 px-4 h-14">
+          {onBack && <button onClick={onBack} className="-ml-1 w-9 h-9 rounded-lg grid place-items-center active:bg-white/10 transition-colors" aria-label="Back"><ChevronLeft size={26} /></button>}
+          {onMenu && <button onClick={onMenu} className="-ml-1 w-9 h-9 rounded-lg grid place-items-center active:bg-white/10 transition-colors" aria-label="Menu"><Menu size={26} /></button>}
+          <div className="flex-1 min-w-0 truncate">{brand ? <Wordmark name={title} size={20} /> : <span className="text-[17px] font-semibold uppercase tracking-wide">{title}</span>}</div>
+          <div className="flex items-center gap-1.5 font-semibold text-sm bg-white/10 px-2.5 py-1 rounded-full"><Wallet size={17} className="text-[#f5c542]" />₹{user.balance.toLocaleString("en-IN")}</div>
+        </div>
+      </div>
+    </header>
   );
 }
 

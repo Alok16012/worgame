@@ -41,7 +41,7 @@ function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
       <div className="absolute inset-0 bg-black/50 fadein" onClick={onClose} />
       <div className="relative w-full max-w-[430px] h-full pointer-events-none">
         <aside className="slidein pointer-events-auto absolute left-0 top-0 h-full w-[78%] bg-white overflow-y-auto no-scrollbar">
-          <div className="px-5 pt-8 pb-5 text-white" style={{ background: "radial-gradient(100% 80% at 50% 0%, #23489f, #0b1d4f)" }}>
+          <div className="px-5 pb-5 text-white" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 24px)", background: "radial-gradient(100% 80% at 50% 0%, #23489f, #0b1d4f)" }}>
             <div className="flex justify-center mb-4"><Logo size={26} /></div>
             <div className="font-bold text-lg">{u?.name}</div>
             <div className="text-sm opacity-80">{u?.mobile} · ₹{u?.balance.toLocaleString("en-IN")}</div>
