@@ -88,6 +88,7 @@ function Shell() {
   const [drawer, setDrawer] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: "ok" | "bad" } | null>(null);
   const timer = useRef(0);
+  const lastBackPress = useRef(0);
   const route = stack[stack.length - 1];
 
   useEffect(() => {
@@ -107,14 +108,68 @@ function Shell() {
   }, []);
 
   const nav = useMemo<Nav>(() => ({
-    push: (r) => { setStack((s) => [...s, r]); window.scrollTo(0, 0); },
-    back: () => { setStack((s) => (s.length > 1 ? s.slice(0, -1) : [{ name: "home" }])); window.scrollTo(0, 0); },
-    reset: (r) => { setStack([r]); window.scrollTo(0, 0); },
+    push: (r) => {
+      try { window.history.pushState({ r: r.name }, ""); } catch {}
+      setStack((s) => [...s, r]);
+      window.scrollTo(0, 0);
+    },
+    back: () => {
+      setStack((s) => (s.length > 1 ? s.slice(0, -1) : [{ name: "home" }]));
+      window.scrollTo(0, 0);
+    },
+    reset: (r) => {
+      setStack([r]);
+      window.scrollTo(0, 0);
+    },
     logout: () => {
       if (uid) update((d) => { const u = d.users.find((x) => x.id === uid); if (u) u.loggedIn = false; });
       signIn(null);
     },
   }), [uid, update, signIn]);
+
+  // Native Android hardware back button and web popstate support
+  useEffect(() => {
+    let sub: any;
+    const setupBack = async () => {
+      try {
+        const { App } = await import("@capacitor/app");
+        sub = await App.addListener("backButton", () => {
+          if (drawer) {
+            setDrawer(false);
+            return;
+          }
+          if (stack.length > 1) {
+            nav.back();
+            return;
+          }
+          const now = Date.now();
+          if (now - lastBackPress.current < 2000) {
+            App.exitApp();
+          } else {
+            lastBackPress.current = now;
+            showToast("Press back again to exit");
+          }
+        });
+      } catch {}
+    };
+    setupBack();
+
+    const onPop = () => {
+      if (drawer) {
+        setDrawer(false);
+        return;
+      }
+      if (stack.length > 1) {
+        setStack((s) => (s.length > 1 ? s.slice(0, -1) : [{ name: "home" }]));
+      }
+    };
+    window.addEventListener("popstate", onPop);
+
+    return () => {
+      sub?.remove?.();
+      window.removeEventListener("popstate", onPop);
+    };
+  }, [drawer, stack.length, nav, showToast]);
 
   const user = uid ? findUser(state, uid) : undefined;
 

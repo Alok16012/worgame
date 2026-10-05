@@ -195,23 +195,29 @@ function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () =
 }
 
 function AdminLogin({ onLogin }: { onLogin: (user: AdminUser) => void }) {
-  const { state, attempt } = useStore();
+  const { state, attempt, reloadFromCloud } = useStore();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const res = attempt((d) => loginAdmin(d, username, password));
-    setLoading(false);
-    if (!res.ok) {
-      setError(res.error);
-      return;
+    try {
+      await reloadFromCloud();
+      const res = attempt((d) => loginAdmin(d, username, password));
+      setLoading(false);
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      onLogin(res.value);
+    } catch (err: any) {
+      setLoading(false);
+      setError(err?.message || "Login failed");
     }
-    onLogin(res.value);
   };
 
   return (
@@ -273,7 +279,7 @@ function AdminContent() {
 
   useEffect(() => {
     try {
-      const stored = sessionStorage.getItem("wg_admin_user");
+      const stored = localStorage.getItem("wg_admin_user");
       if (stored) {
         setAdminUser(JSON.parse(stored));
       }
@@ -283,16 +289,16 @@ function AdminContent() {
 
   const handleLogin = (user: AdminUser) => {
     try {
-      sessionStorage.setItem("wg_admin_user", JSON.stringify(user));
-      sessionStorage.setItem("wg_admin", "1");
+      localStorage.setItem("wg_admin_user", JSON.stringify(user));
+      localStorage.setItem("wg_admin", "1");
     } catch {}
     setAdminUser(user);
   };
 
   const handleLogout = () => {
     try {
-      sessionStorage.removeItem("wg_admin_user");
-      sessionStorage.removeItem("wg_admin");
+      localStorage.removeItem("wg_admin_user");
+      localStorage.removeItem("wg_admin");
     } catch {}
     setAdminUser(null);
   };
