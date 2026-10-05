@@ -10,11 +10,17 @@ import { IconField, whatsappLink } from "../ui";
 
 export function Splash({ onDone }: { onDone: () => void }) {
   const { reloadFromCloud } = useStore();
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
+
   useEffect(() => {
     reloadFromCloud().catch(() => {});
-    const t = window.setTimeout(onDone, 1800);
+    const t = window.setTimeout(() => {
+      onDoneRef.current();
+    }, 1200);
     return () => window.clearTimeout(t);
-  }, [onDone, reloadFromCloud]);
+  }, []);
+
   return (
     <div className="min-h-dvh grid place-items-center page-blue">
       <div className="pop"><Logo size={52} boxed /></div>

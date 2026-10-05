@@ -185,11 +185,15 @@ function Shell() {
     }
   }, [uid, user, isCloudSynced, signIn, showToast]);
 
+  const handleSplashDone = useCallback(() => {
+    setSplash(false);
+  }, []);
+
   if (state.settings.maintenance) {
     return <div className="min-h-dvh grid place-items-center text-center px-8 page-blue"><div><Wrench size={48} className="mx-auto text-[#f5c542]" /><div className="text-xl font-bold mt-4">Under Maintenance</div><p className="text-sm text-slate-500 mt-1">We&apos;ll be back shortly.</p></div></div>;
   }
   if (uid === undefined) return null;
-  if (splash) return <Splash onDone={() => setSplash(false)} />;
+  if (splash) return <Splash onDone={handleSplashDone} />;
   if (!uid || !user) return <><Auth onSignedIn={(id) => { signIn(id); showToast("Login successful!"); }} toast={showToast} /><Toast msg={toast} /></>;
 
   const quizMode = state.settings.bettingDisabled;
@@ -251,7 +255,7 @@ export default function WordGameApp() {
   return (
     <div className="stage">
       <div className="app">
-        <StoreProvider>
+        <StoreProvider fallback={<div className="min-h-dvh grid place-items-center page-blue"><Logo size={52} boxed /></div>}>
           <Shell />
         </StoreProvider>
       </div>
