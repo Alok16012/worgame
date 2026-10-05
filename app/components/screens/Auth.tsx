@@ -64,17 +64,27 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
       return toast("Please enter a valid 10-digit mobile number", "bad");
     }
 
+    setIsSending(true);
     // Refresh state from cloud to ensure up-to-date user check
-    await reloadFromCloud();
+    const fresh = await reloadFromCloud();
+    const currentUsers = fresh?.users || state.users;
 
     if (targetMode === "register") {
-      if (!name.trim()) return toast("Please enter your full name", "bad");
-      if (password.length < 4) return toast("Password must be at least 4 characters", "bad");
-      if (state.users.some((u) => u.mobile === clean)) {
+      if (!name.trim()) {
+        setIsSending(false);
+        return toast("Please enter your full name", "bad");
+      }
+      if (password.length < 4) {
+        setIsSending(false);
+        return toast("Password must be at least 4 characters", "bad");
+      }
+      if (currentUsers.some((u) => u.mobile === clean)) {
+        setIsSending(false);
         return toast("Mobile number already registered. Please login.", "bad");
       }
     } else {
-      if (!state.users.some((u) => u.mobile === clean)) {
+      if (!currentUsers.some((u) => u.mobile === clean)) {
+        setIsSending(false);
         return toast("Mobile number not registered in system", "bad");
       }
     }
@@ -82,12 +92,12 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
     // If OTP is disabled in admin settings, register directly
     if (state.settings.otpEnabled === false && targetMode === "register") {
       const r = attempt((d) => registerUser(d, name, clean, password));
+      setIsSending(false);
       if (!r.ok) return toast(r.error, "bad");
       toast("Registration successful!", "ok");
       return onSignedIn(r.value);
     }
 
-    setIsSending(true);
     const res = await send4DigitOtp(clean, state.settings.otpApiKey);
     setIsSending(false);
 
@@ -144,19 +154,21 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
 
     setIsVerifying(true);
     const vResult = await verify4DigitOtp(otpValue, expectedOtp, sessionId, state.settings.otpApiKey);
-    setIsVerifying(false);
 
     if (!vResult.ok) {
+      setIsVerifying(false);
       return toast(vResult.message || "Invalid OTP! Please try again.", "bad");
     }
 
     if (otpMode === "register") {
       const r = attempt((d) => registerUser(d, name, cleanMobile, password));
+      setIsVerifying(false);
       if (!r.ok) return toast(r.error, "bad");
       toast("Registration successful! Welcome to Shri Kalyan.", "ok");
       onSignedIn(r.value);
     } else {
       const r = attempt((d) => resetUserPassword(d, cleanMobile, newPassword));
+      setIsVerifying(false);
       if (!r.ok) return toast(r.error, "bad");
       toast("Password reset successfully! Please login with your new password.", "ok");
       setIsOtpStep(false);
@@ -171,17 +183,32 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
     if (!/^[6-9]\d{9}$/.test(clean)) return toast("Please enter a valid 10-digit mobile number", "bad");
     if (!password) return toast("Please enter your password", "bad");
 
-    // If user is not yet in local state, fetch latest cloud database first
-    if (!state.users.some((u) => u.mobile === clean)) {
+    setIsSending(true);
+    try {
       const fresh = await reloadFromCloud();
-      if (!fresh?.users?.some((u) => u.mobile === clean) && !state.users.some((u) => u.mobile === clean)) {
+      const currentUsers = fresh?.users || state.users;
+      const u = currentUsers.find((x) => x.mobile === clean);
+      if (!u) {
+        setIsSending(false);
         return toast("Mobile number is not registered", "bad");
       }
-    }
+      if (u.password !== password) {
+        setIsSending(false);
+        return toast("Password is incorrect", "bad");
+      }
+      if (u.status !== "active") {
+        setIsSending(false);
+        return toast("Your account is blocked. Contact admin.", "bad");
+      }
 
-    const r = attempt((d) => loginUser(d, clean, password));
-    if (!r.ok) return toast(r.error, "bad");
-    onSignedIn(r.value);
+      const r = attempt((d) => loginUser(d, clean, password));
+      setIsSending(false);
+      if (!r.ok) return toast(r.error, "bad");
+      onSignedIn(r.value);
+    } catch (e: any) {
+      setIsSending(false);
+      toast(e?.message || "Login failed. Please check internet connection.", "bad");
+    }
   };
 
   return (

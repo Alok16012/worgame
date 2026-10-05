@@ -81,7 +81,7 @@ function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
 }
 
 function Shell() {
-  const { state, update } = useStore();
+  const { state, update, isCloudSynced } = useStore();
   const [uid, setUid] = useState<number | null | undefined>(undefined);
   const [splash, setSplash] = useState(true);
   const [stack, setStack] = useState<Route[]>([{ name: "home" }]);
@@ -117,13 +117,18 @@ function Shell() {
   }), [uid, update, signIn]);
 
   const user = uid ? findUser(state, uid) : undefined;
-  // Admin blocked the user or pressed "Logout Now" (maybe from another tab) → sign out here too.
+
+  // Auto-logout ONLY after cloud sync has confirmed the user is blocked or nonexistent
   useEffect(() => {
-    if (uid && (!user || user.status !== "active" || !user.loggedIn)) {
+    if (!uid || !isCloudSynced) return;
+    if (user && user.status !== "active") {
       signIn(null);
-      showToast(user?.status !== "active" ? "Your account is blocked. Contact admin." : "You have been logged out", "bad");
+      showToast("Your account is blocked. Contact admin.", "bad");
+    } else if (!user) {
+      signIn(null);
+      showToast("Session expired. Please login again.", "bad");
     }
-  }, [uid, user, signIn, showToast]);
+  }, [uid, user, isCloudSynced, signIn, showToast]);
 
   if (state.settings.maintenance) {
     return <div className="min-h-dvh grid place-items-center text-center px-8 page-blue"><div><Wrench size={48} className="mx-auto text-[#f5c542]" /><div className="text-xl font-bold mt-4">Under Maintenance</div><p className="text-sm text-slate-500 mt-1">We&apos;ll be back shortly.</p></div></div>;
