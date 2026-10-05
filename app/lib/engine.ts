@@ -443,6 +443,14 @@ export function resetUserPassword(s: State, mobile: string, newPassword: string)
   return u.id;
 }
 
+export function deleteUser(s: State, userId: number) {
+  const idx = s.users.findIndex((u) => u.id === userId);
+  if (idx === -1) fail("User not found");
+  const u = s.users[idx];
+  s.users.splice(idx, 1);
+  log(s, "Delete User", `${u.name} (${u.mobile})`);
+}
+
 /* ---------------- reporting ---------------- */
 
 export const liveBids = (s: State, pred: (b: Bid) => boolean) => s.bids.filter((b) => b.status !== "reverted" && pred(b));

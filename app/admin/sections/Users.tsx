@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Ban, Eye, EyeOff, MessageCircle, Pencil, Phone, Plus } from "lucide-react";
-import { findGame, isCredited, log, manualFund, nid, registerUser, revertBids, updateUser } from "../../lib/engine";
+import { Ban, Eye, EyeOff, MessageCircle, Pencil, Phone, Plus, Trash2 } from "lucide-react";
+import { deleteUser, findGame, isCredited, log, manualFund, nid, registerUser, revertBids, updateUser } from "../../lib/engine";
 import { fmtDate, fmtTime, inr, sum } from "../../lib/format";
 import { useStore } from "../../lib/store";
 import { MODULES, type Bid, type User } from "../../lib/types";
@@ -14,7 +14,7 @@ const wa = (m: string) => `https://wa.me/91${m}`;
 
 export function UsersPage({ go }: { go: (r: string) => void }) {
   const { state: s, attempt, update } = useStore();
-  const { toast } = useAdmin();
+  const { toast, confirm } = useAdmin();
   const [noBet, setNoBet] = useState(false);
   const [create, setCreate] = useState<null | { name: string; mobile: string; password: string }>(null);
   const list = s.users.filter((u) => !noBet || !u.betting).slice().reverse();
@@ -34,6 +34,29 @@ export function UsersPage({ go }: { go: (r: string) => void }) {
     setCreate(null);
   };
 
+  const removeUser = async (u: User) => {
+    if (
+      !(await confirm({
+        title: "Delete User",
+        body: (
+          <>
+            Are you sure you want to permanently delete user <b>{u.name}</b> ({u.mobile})? All user data will be removed.
+          </>
+        ),
+        ok: "Delete Permanently",
+        tone: "red",
+      }))
+    )
+      return;
+
+    const r = attempt((d) => deleteUser(d, u.id));
+    if (r.ok) {
+      toast(`User ${u.name} deleted`, "ok");
+    } else {
+      toast(r.error, "bad");
+    }
+  };
+
   return (
     <Card title={noBet ? "Users Cannot Bet" : "Users"} right={
       <div className="flex gap-2">
@@ -45,13 +68,16 @@ export function UsersPage({ go }: { go: (r: string) => void }) {
         head={["Sr No", "Name", "Mobile", "Status", "Betting", "Wallet Balance", "Created At", "Action"]}
         rows={list.map((u, i) => [
           i + 1,
-          <button key="n" className="text-left hover:text-[#0d6efd] whitespace-normal max-w-44" onClick={() => go(`users/${u.id}`)}>{u.name}</button>,
+          <button key="n" className="text-left hover:text-[#0d6efd] whitespace-normal max-w-44 font-medium" onClick={() => go(`users/${u.id}`)}>{u.name}</button>,
           <a key="m" href={wa(u.mobile)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1"><MessageCircle size={13} className="text-emerald-500" />{u.mobile}</a>,
-          <span key="s" className={u.status === "active" ? "text-emerald-600" : "text-rose-600"}>{u.status === "active" ? "Active" : "Inactive"}</span>,
+          <span key="s" className={u.status === "active" ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>{u.status === "active" ? "Active" : "Inactive"}</span>,
           <YesNo key="b" on={u.betting} onChange={() => update((d) => updateUser(d, u.id, { betting: !u.betting }, `Betting ${u.betting ? "off" : "on"}`))} />,
           u.balance.toFixed(2),
           fmtStamp(u.joined),
-          <button key="e" onClick={() => go(`users/${u.id}`)} className="p-1.5 text-slate-600 hover:text-[#0d6efd]" aria-label="Edit"><Pencil size={15} /></button>,
+          <div key="act" className="flex items-center gap-1">
+            <button onClick={() => go(`users/${u.id}`)} className="p-1.5 text-slate-600 hover:text-[#0d6efd]" aria-label="Edit"><Pencil size={15} /></button>
+            <button onClick={() => removeUser(u)} className="p-1.5 text-rose-500 hover:text-rose-700" aria-label="Delete"><Trash2 size={15} /></button>
+          </div>,
         ])}
         text={list.map((u) => `${u.name} ${u.mobile}`)} />
       {create && (
@@ -134,7 +160,44 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
           </div>
         </Card>
 
-        <Card title="Personal Information" right={<Btn size="sm" variant="ghost" onClick={() => setEdit({ ...u })}><Pencil size={13} /> Edit</Btn>}>
+        <Card
+          title="Personal Information"
+          right={
+            <div className="flex items-center gap-2">
+              <Btn size="sm" variant="ghost" onClick={() => setEdit({ ...u })}>
+                <Pencil size={13} /> Edit
+              </Btn>
+              <Btn
+                size="sm"
+                variant="red"
+                onClick={async () => {
+                  if (
+                    !(await confirm({
+                      title: "Delete User",
+                      body: (
+                        <>
+                          Are you sure you want to permanently delete user <b>{u.name}</b> ({u.mobile})?
+                        </>
+                      ),
+                      ok: "Delete Permanently",
+                      tone: "red",
+                    }))
+                  )
+                    return;
+                  const r = attempt((d) => deleteUser(d, u.id));
+                  if (r.ok) {
+                    toast(`User ${u.name} deleted`, "ok");
+                    go("users");
+                  } else {
+                    toast(r.error, "bad");
+                  }
+                }}
+              >
+                <Trash2 size={13} /> Delete User
+              </Btn>
+            </div>
+          }
+        >
           <div className="grid md:grid-cols-2 gap-x-6">
             <div>{info("Full Name", u.name)}{info("Mobile", u.mobile)}{info("Creation Date", fmtStamp(u.joined))}</div>
             <div>{info("Email", u.email)}{info("Password", u.password)}{info("Last Login", u.lastLogin ? fmtStamp(u.lastLogin) : "N/A")}</div>
