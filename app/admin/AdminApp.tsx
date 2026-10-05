@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart3, ChevronDown, ChevronUp, FileText, Gamepad2, Home, LogOut, Megaphone, Menu, RotateCcw, Settings as SettingsIcon, Smartphone, Star, Target, Users, Wallet, Dices } from "lucide-react";
+import { BarChart3, ChevronDown, ChevronUp, FileText, Gamepad2, Home, LogOut, Megaphone, Menu, Settings as SettingsIcon, Smartphone, Star, Target, Users, Wallet, Dices } from "lucide-react";
 import { StoreProvider, useStore } from "../lib/store";
 import type { AdminUser, Cat } from "../lib/types";
 import { loginAdmin } from "../lib/engine";
@@ -126,13 +126,6 @@ function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () =
 
   const crumbs = ["Dashboard", ...(page === "dashboard" || !CRUMB[page] ? [] : [page === "users" && arg ? "User" : CRUMB[page]]), ...(page === "users" && arg ? ["User Profile"] : [])];
 
-  const resetData = async () => {
-    if (await confirm({ title: "Reset System Database", body: "Warning: All users, bids, results and settings will be reset to initial state. Proceed?", ok: "Reset", tone: "red" })) {
-      reset();
-      toast("Database reset to initial state", "ok");
-    }
-  };
-
   return (
     <div className="min-h-dvh bg-[#f4f6f9] text-slate-800">
       <header className="sticky top-0 z-30 h-[68px] bg-[#0e1a3a] flex items-center gap-3 px-4">
@@ -153,7 +146,6 @@ function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () =
         </button>
         <div className="flex-1" />
         <a href="/" target="_blank" className="hidden md:inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm"><Smartphone size={16} /> Player App</a>
-        <button onClick={resetData} className="inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm px-2" title="Reset system data"><RotateCcw size={16} /><span className="hidden md:inline">Reset</span></button>
         <div className="flex items-center gap-2 pl-2">
           <div className="w-9 h-9 rounded bg-[#28a745] text-white grid place-items-center font-bold text-sm shadow">
             {adminUser.name.charAt(0).toUpperCase()}
