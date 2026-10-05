@@ -67,10 +67,16 @@ export const RESULT_HOLD_HOUR = 8;
 /** The result "day" the app is on: before 8 AM it is still yesterday (night markets finish after midnight). */
 export const gameDay = (now = new Date()) => (now.getHours() < RESULT_HOLD_HOUR ? addDays(-1, now) : ymd(now));
 
-/** Result to show on a market card: today's if declared, else (before 8 AM) yesterday's. */
+export const hasResult = (r?: Result) => Boolean(r && (r.openPana || r.closePana || r.jodi));
+
+/** Result to show on a market card: today's if declared, else (before 8 AM) yesterday's declared result. */
 export function displayResult(s: State, g: Game, now = new Date()) {
   const today = resultOf(s, g.id, ymd(now));
-  return today || now.getHours() >= RESULT_HOLD_HOUR ? today : resultOf(s, g.id, addDays(-1, now));
+  // Before 8:00 AM: if today has no declared result yet, show yesterday's result!
+  if (now.getHours() < RESULT_HOLD_HOUR && !hasResult(today)) {
+    return resultOf(s, g.id, addDays(-1, now));
+  }
+  return today;
 }
 
 export function withdrawOpen(s: State, now = new Date()) {
