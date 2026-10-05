@@ -23,8 +23,8 @@ function useClock() {
 /** Market card: white OPEN/CLOSE times, white name, gold result, green ▶ when open, red ▶ when closed. In Quiz Mode: displays 'Play Quiz' button! */
 export function MarketCard({ g, nav, now }: { g: Game; nav: Nav; now: Date }) {
   const { state } = useStore();
-  const { toast } = useSession();
-  const quizMode = state.settings.bettingDisabled;
+  const { toast, user } = useSession();
+  const quizMode = user ? !user.betting : state.settings.bettingDisabled;
   const st = marketState(state, g, now);
   const holiday = isOffDay(g, now);
   const text = resultText(g.cat, displayResult(state, g, now));
@@ -69,9 +69,10 @@ function Pill({ icon, label, onClick, href }: { icon: React.ReactNode; label: st
 
 export function Home({ nav, openMenu }: { nav: Nav; openMenu: () => void }) {
   const { state } = useStore();
+  const { user } = useSession();
   const now = useClock();
   const s = state.settings;
-  const quizMode = s.bettingDisabled;
+  const quizMode = user ? !user.betting : s.bettingDisabled;
   const [slide, setSlide] = useState(0);
   useEffect(() => {
     if (s.sliders.length < 2) return;
@@ -130,8 +131,9 @@ export function Home({ nav, openMenu }: { nav: Nav; openMenu: () => void }) {
 
 export function MarketList({ nav, cat }: { nav: Nav; cat: "starline" | "gali" }) {
   const { state } = useStore();
+  const { user } = useSession();
   const now = useClock();
-  const quizMode = state.settings.bettingDisabled;
+  const quizMode = user ? !user.betting : state.settings.bettingDisabled;
   return (
     <>
       <Header title={cat === "starline" ? "Starline" : "Gali Disawar"} onBack={nav.back} />

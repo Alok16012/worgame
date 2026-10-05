@@ -67,8 +67,8 @@ function useHashRoute(): [string, (r: string) => void] {
 
 export function Logo({ name }: { name: string }) {
   return (
-    <div className="bg-white rounded px-2.5 py-1.5 flex items-center gap-1.5 select-none">
-      <div className="w-7 h-7 rounded-full bg-[#0e1a3a] grid place-items-center text-[#f5c542] text-[13px]" style={{ fontFamily: "var(--font-yatra)" }}>श्री</div>
+    <div className="bg-white rounded px-2.5 py-1.5 flex items-center gap-2 select-none shadow-sm">
+      <img src="/icon.png" alt="Logo" className="w-7 h-7 rounded-md object-cover" />
       <div className="font-bold text-[#0e1a3a] leading-none text-[15px]" style={{ fontFamily: "var(--font-cinzel)" }}>{name}</div>
     </div>
   );
@@ -88,7 +88,7 @@ function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () =
 
   const toggleBetting = () => {
     update((d) => { d.settings.bettingDisabled = !d.settings.bettingDisabled; });
-    toast(!quizMode ? "Switched to Educational Quiz Safe Mode (Play Store Safe)" : "Switched to Betting Mode (Full Matka Game)", "ok");
+    toast(!quizMode ? "New registrations will default to Educational Quiz Safe Mode (Existing users unchanged)" : "New registrations will default to Betting Mode (Existing users unchanged)", "ok");
   };
 
   useEffect(() => {
@@ -273,24 +273,38 @@ function AdminLogin({ onLogin }: { onLogin: (user: AdminUser) => void }) {
   );
 }
 
+function getStoredAdmin(): AdminUser | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("wg_admin_user") || sessionStorage.getItem("wg_admin_user");
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u && (u.username || u.name)) return u;
+    }
+  } catch {}
+  return null;
+}
+
 function AdminContent() {
-  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(() => getStoredAdmin());
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("wg_admin_user");
-      if (stored) {
-        setAdminUser(JSON.parse(stored));
-      }
-    } catch {}
-    setLoading(false);
+    setMounted(true);
+    const u = getStoredAdmin();
+    if (u) {
+      setAdminUser(u);
+    }
   }, []);
 
   const handleLogin = (user: AdminUser) => {
     try {
-      localStorage.setItem("wg_admin_user", JSON.stringify(user));
+      const str = JSON.stringify(user);
+      localStorage.setItem("wg_admin_user", str);
       localStorage.setItem("wg_admin", "1");
+      sessionStorage.setItem("wg_admin_user", str);
+      sessionStorage.setItem("wg_admin", "1");
+      document.cookie = `wg_admin=1; path=/; max-age=${60 * 60 * 24 * 30}`;
     } catch {}
     setAdminUser(user);
   };
@@ -299,11 +313,16 @@ function AdminContent() {
     try {
       localStorage.removeItem("wg_admin_user");
       localStorage.removeItem("wg_admin");
+      sessionStorage.removeItem("wg_admin_user");
+      sessionStorage.removeItem("wg_admin");
+      document.cookie = "wg_admin=; path=/; max-age=0";
     } catch {}
     setAdminUser(null);
   };
 
-  if (loading) return <div className="min-h-dvh bg-[#f4f6f9]" />;
+  if (!mounted) {
+    return <div className="min-h-dvh bg-[#f4f6f9]" />;
+  }
 
   return !adminUser ? (
     <AdminLogin onLogin={handleLogin} />

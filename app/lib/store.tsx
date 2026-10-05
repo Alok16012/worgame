@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { GameError } from "./engine";
 import { seedState, STATE_VERSION } from "./seed";
-import type { State } from "./types";
+import { MODULES, type State } from "./types";
 import { supabase, isSupabaseConfigured } from "./supabase";
 
 // Shared demo database. State is persisted to localStorage and re-read on the `storage` event.
@@ -26,6 +26,30 @@ const Ctx = createContext<Store | null>(null);
 
 function normalize(s: State): State {
   if (!s.ideas) s.ideas = [];
+  if (!s.admins || !Array.isArray(s.admins) || s.admins.length === 0) {
+    s.admins = [
+      {
+        id: 999,
+        name: "Master Admin",
+        username: "admin",
+        password: "admin@777",
+        role: "Super Admin",
+        active: true,
+      },
+    ];
+  }
+  if (!s.roles || !Array.isArray(s.roles) || s.roles.length === 0) {
+    s.roles = [
+      { id: 1, name: "Super Admin", perms: [...MODULES] },
+      { id: 2, name: "Result Manager", perms: ["Dashboard", "Declare Result", "Prediction", "Games", "Starline", "Galidesawar", "Reports"] },
+      { id: 3, name: "Accountant", perms: ["Dashboard", "Wallet", "Withdraw", "Reports"] },
+    ];
+  }
+  if (s.users) {
+    for (const u of s.users) {
+      if (u.betting === undefined) u.betting = true;
+    }
+  }
   if (s.settings) {
     if (s.settings.bettingDisabled === undefined) s.settings.bettingDisabled = false;
     if (s.settings.quizTitle === undefined) s.settings.quizTitle = "Market Educational Quiz";

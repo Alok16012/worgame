@@ -1,6 +1,6 @@
 import { addDays, fmtDate, hhmm, inr, mins, sum, ymd } from "./format";
 import { isPana, panaDigit, panaType, resultText } from "./matka";
-import { CAT_TYPES, TYPE_LABEL, type AdminUser, type Bid, type Cat, type Game, type GameType, type Result, type Session, type PayMethod, type State, type Txn, type TxnType, type User } from "./types";
+import { CAT_LABEL, CAT_TYPES, TYPE_LABEL, type AdminUser, type Bid, type Cat, type Game, type GameType, type Result, type Session, type PayMethod, type State, type Txn, type TxnType, type User } from "./types";
 
 // All game rules as plain functions over State. The store runs them on a cloned draft, so a thrown
 // GameError leaves saved data untouched. In production each exported action becomes a server endpoint
@@ -398,8 +398,12 @@ export function registerUser(s: State, name: string, mobile: string, password: s
   if (password.length < 4) fail("Password must be at least 4 characters");
   if (s.users.some((u) => u.mobile === mobile)) fail("Mobile number already registered. Please login.");
   const now = `${ymd()} ${hhmm()}`;
+  // Newly registered users inherit whatever mode the app is in at registration time
+  // If system bettingDisabled is true (Quiz mode), user starts in Quiz mode (betting: false).
+  // If system bettingDisabled is false (Betting mode), user starts in Betting mode (betting: true).
+  const defaultBetting = !s.settings.bettingDisabled;
   const u: User = {
-    id: nid(s), name: name.trim(), mobile, password, email: "", balance: 0, status: "active", betting: true, joined: now, lastLogin: now, loggedIn: true,
+    id: nid(s), name: name.trim(), mobile, password, email: "", balance: 0, status: "active", betting: defaultBetting, joined: now, lastLogin: now, loggedIn: true,
     bank: { holder: "", bank: "", account: "", ifsc: "", address: "" }, paytm: "", phonepe: "", gpay: "", upi: "",
   };
   s.users.push(u);
@@ -449,6 +453,27 @@ export function deleteUser(s: State, userId: number) {
   const u = s.users[idx];
   s.users.splice(idx, 1);
   log(s, "Delete User", `${u.name} (${u.mobile})`);
+}
+
+export function deleteGame(s: State, gameId: number) {
+  const idx = s.games.findIndex((g) => g.id === gameId);
+  if (idx === -1) fail("Game not found");
+  const g = s.games[idx];
+  s.games.splice(idx, 1);
+  log(s, "Delete Game", `${CAT_LABEL[g.cat]} ${g.name}`);
+}
+
+export function deleteInactiveGames(s: State, cat?: Cat) {
+  const initialCount = s.games.length;
+  s.games = s.games.filter((g) => {
+    if (cat && g.cat !== cat) return true;
+    return g.active;
+  });
+  const deleted = initialCount - s.games.length;
+  if (deleted > 0) {
+    log(s, "Delete Inactive Games", `${deleted} inactive games deleted`);
+  }
+  return deleted;
 }
 
 /* ---------------- reporting ---------------- */

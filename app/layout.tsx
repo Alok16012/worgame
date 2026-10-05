@@ -16,6 +16,16 @@ const yatra = Yatra_One({ subsets: ["devanagari", "latin"], weight: "400", displ
 export const metadata: Metadata = {
   title: "Shri Kalyan — Matka • Starline • Gali Desawar",
   description: "Matka markets, Starline and Gali Desawar — play, win and withdraw instantly.",
+  icons: {
+    icon: [
+      { url: "/icon.png", sizes: "512x512", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {

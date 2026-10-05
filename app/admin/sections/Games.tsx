@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil } from "lucide-react";
-import { log, nid } from "../../lib/engine";
+import { Pencil, Trash2 } from "lucide-react";
+import { deleteGame, deleteInactiveGames, log, nid } from "../../lib/engine";
 import { DAYS, fmtTime } from "../../lib/format";
 import { DIGITS, DOUBLE_PANA, JODIS, SINGLE_PANA, TRIPLE_PANA } from "../../lib/matka";
 import { useStore } from "../../lib/store";
@@ -10,12 +10,61 @@ import { CAT_LABEL, CAT_TYPES, TYPE_LABEL, type Cat, type Game, type GameType, t
 import { Btn, Card, DataTable, Field, Modal, YesNo, useAdmin } from "../ui";
 
 export function GameNames({ cat }: { cat: Cat }) {
-  const { state: s, update } = useStore();
-  const { toast } = useAdmin();
+  const { state: s, attempt, update } = useStore();
+  const { toast, confirm } = useAdmin();
   const two = cat === "main";
   const blank: Game = { id: 0, cat, name: "", open: "10:00", close: "11:00", active: true, offDays: [] };
   const [edit, setEdit] = useState<Game | null>(null);
   const games = s.games.filter((g) => g.cat === cat);
+  const inactiveGames = games.filter((g) => !g.active);
+
+  const removeGame = async (g: Game) => {
+    if (
+      !(await confirm({
+        title: "Delete Game",
+        body: (
+          <>
+            Are you sure you want to permanently delete game <b>{g.name}</b>?
+          </>
+        ),
+        ok: "Delete Permanently",
+        tone: "red",
+      }))
+    )
+      return;
+
+    const r = attempt((d) => deleteGame(d, g.id));
+    if (r.ok) {
+      toast(`Game ${g.name} deleted`, "ok");
+    } else {
+      toast(r.error, "bad");
+    }
+  };
+
+  const removeInactive = async () => {
+    if (!inactiveGames.length) return;
+    if (
+      !(await confirm({
+        title: "Delete All Inactive / Closed Games",
+        body: (
+          <>
+            Are you sure you want to permanently delete all <b>{inactiveGames.length}</b> closed (inactive) games in{" "}
+            <b>{CAT_LABEL[cat]}</b>?
+          </>
+        ),
+        ok: `Delete ${inactiveGames.length} Closed Games`,
+        tone: "red",
+      }))
+    )
+      return;
+
+    const r = attempt((d) => deleteInactiveGames(d, cat));
+    if (r.ok) {
+      toast(`${r.value} closed games deleted`, "ok");
+    } else {
+      toast(r.error, "bad");
+    }
+  };
 
   const save = () => {
     if (!edit) return;
@@ -34,12 +83,27 @@ export function GameNames({ cat }: { cat: Cat }) {
   };
 
   return (
-    <Card title={`${cat === "main" ? "" : CAT_LABEL[cat] + " "}Game Name`} right={<Btn variant="dark" onClick={() => setEdit(blank)}>+ Add Game</Btn>}>
+    <Card
+      title={`${cat === "main" ? "" : CAT_LABEL[cat] + " "}Game Name`}
+      right={
+        <div className="flex items-center gap-2">
+          {inactiveGames.length > 0 && (
+            <Btn variant="red" onClick={removeInactive}>
+              <Trash2 size={14} /> Delete Closed ({inactiveGames.length})
+            </Btn>
+          )}
+          <Btn variant="dark" onClick={() => setEdit(blank)}>+ Add Game</Btn>
+        </div>
+      }
+    >
       <DataTable head={["Sr No", "Game Name", ...(two ? ["Open Time", "Close Time"] : ["Result Time"]), "Market Off Days", "Active", "Action"]}
         rows={games.map((g, i) => [i + 1, <b key="n">{g.name}</b>, ...(two ? [fmtTime(g.open), fmtTime(g.close)] : [fmtTime(g.close)]),
           g.offDays?.length ? <span key="o" className="text-rose-600 font-medium">{g.offDays.map((d) => DAYS[d]).join(", ")}</span> : <span key="o" className="text-slate-400">Open all days</span>,
           <YesNo key="a" on={g.active} onChange={() => update((d) => { const x = d.games.find((y) => y.id === g.id)!; x.active = !x.active; log(d, "Game Status", `${x.name} → ${x.active ? "active" : "inactive"}`); })} />,
-          <button key="e" className="p-1.5 text-slate-600 hover:text-[#0d6efd]" onClick={() => setEdit({ ...g, offDays: g.offDays ?? [] })} aria-label="Edit"><Pencil size={15} /></button>])}
+          <div key="act" className="flex items-center gap-1">
+            <button className="p-1.5 text-slate-600 hover:text-[#0d6efd]" onClick={() => setEdit({ ...g, offDays: g.offDays ?? [] })} aria-label="Edit" title="Edit Game"><Pencil size={15} /></button>
+            <button className="p-1.5 text-rose-500 hover:text-rose-700" onClick={() => removeGame(g)} aria-label="Delete" title="Delete Game"><Trash2 size={15} /></button>
+          </div>])}
         text={games.map((g) => g.name)} />
       {edit && (
         <Modal title={edit.id ? "Edit Game" : "Add Game"} onClose={() => setEdit(null)} footer={<><Btn variant="ghost" onClick={() => setEdit(null)}>Close</Btn><Btn onClick={save}>Submit</Btn></>}>

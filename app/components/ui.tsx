@@ -22,7 +22,7 @@ export const NAVY = "#13306f";
 export function Header({ title, onBack, onMenu, brand }: { title: string; onBack?: () => void; onMenu?: () => void; brand?: boolean }) {
   const { user } = useSession();
   const { state } = useStore();
-  const quizMode = state.settings.bettingDisabled;
+  const quizMode = user ? !user.betting : state.settings.bettingDisabled;
   return (
     <header className="sticky top-0 z-20 bg-[#0d2463] border-b border-white/10 text-white select-none">
       <div style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>

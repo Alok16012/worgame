@@ -16,7 +16,20 @@ function Rule({ w }: { w: number }) {
 
 /** `size` is the height of the KALYAN word in px; everything scales from it. */
 export function Logo({ size = 44, boxed = false }: { size?: number; boxed?: boolean }) {
-  const inner = (
+  if (boxed) {
+    const px = Math.max(72, Math.round(size * 3.2));
+    return (
+      <img
+        src="/icon.png"
+        alt="Shri Kalyan"
+        width={px}
+        height={px}
+        className="rounded-3xl shadow-2xl select-none object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.45)]"
+        style={{ width: px, height: px }}
+      />
+    );
+  }
+  return (
     <div className="flex flex-col items-center leading-none select-none" style={{ gap: size * 0.12 }}>
       <span style={{ ...goldText, fontFamily: "var(--font-yatra)", fontSize: size * 0.95, lineHeight: 1 }}>श्री</span>
       <Rule w={size * 4.2} />
@@ -26,13 +39,6 @@ export function Logo({ size = 44, boxed = false }: { size?: number; boxed?: bool
       </span>
       <Rule w={size * 4.2} />
       <span style={{ ...goldText, fontFamily: "var(--font-yatra)", fontSize: size * 0.62, lineHeight: 1.15 }}>श्री कल्याण</span>
-    </div>
-  );
-  if (!boxed) return inner;
-  return (
-    <div className="relative rounded-3xl px-8 py-7 overflow-hidden" style={{ background: "radial-gradient(90% 70% at 50% 30%, #23489f 0%, #10296b 55%, #0a1a48 100%)", boxShadow: "inset 0 0 0 1px rgba(247,215,116,.35), 0 18px 40px rgba(0,0,0,.45)" }}>
-      <div className="absolute left-1/2 top-2 -translate-x-1/2 w-40 h-40 rounded-full blur-3xl" style={{ background: "rgba(255,214,120,.25)", animation: "glow 3s ease-in-out infinite" }} />
-      <div className="relative">{inner}</div>
     </div>
   );
 }

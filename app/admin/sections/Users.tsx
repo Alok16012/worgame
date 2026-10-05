@@ -58,20 +58,25 @@ export function UsersPage({ go }: { go: (r: string) => void }) {
   };
 
   return (
-    <Card title={noBet ? "Users Cannot Bet" : "Users"} right={
+    <Card title={noBet ? "Users In Quiz Mode (Betting OFF)" : "Users"} right={
       <div className="flex gap-2">
-        <Btn variant={noBet ? "ghost" : "red"} onClick={() => setNoBet(!noBet)}><Ban size={15} /> {noBet ? "All Users" : "Users Cannot Bet"}</Btn>
+        <Btn variant={noBet ? "ghost" : "red"} onClick={() => setNoBet(!noBet)}><Ban size={15} /> {noBet ? "All Users" : "Quiz Mode Users (Betting OFF)"}</Btn>
         <Btn variant="dark" onClick={() => setCreate({ name: "", mobile: "", password: "" })}><Plus size={15} /> Create</Btn>
       </div>
     }>
       <DataTable key={String(noBet)}
-        head={["Sr No", "Name", "Mobile", "Status", "Betting", "Wallet Balance", "Created At", "Action"]}
+        head={["Sr No", "Name", "Mobile", "Status", "Betting Mode", "Wallet Balance", "Created At", "Action"]}
         rows={list.map((u, i) => [
           i + 1,
           <button key="n" className="text-left hover:text-[#0d6efd] whitespace-normal max-w-44 font-medium" onClick={() => go(`users/${u.id}`)}>{u.name}</button>,
           <a key="m" href={wa(u.mobile)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1"><MessageCircle size={13} className="text-emerald-500" />{u.mobile}</a>,
           <span key="s" className={u.status === "active" ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>{u.status === "active" ? "Active" : "Inactive"}</span>,
-          <YesNo key="b" on={u.betting} onChange={() => update((d) => updateUser(d, u.id, { betting: !u.betting }, `Betting ${u.betting ? "off" : "on"}`))} />,
+          <div key="b" className="flex items-center gap-1.5">
+            <YesNo on={u.betting} onChange={() => update((d) => updateUser(d, u.id, { betting: !u.betting }, `User Mode changed to ${!u.betting ? "Betting" : "Quiz"}`))} />
+            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${u.betting ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+              {u.betting ? "Betting" : "Quiz"}
+            </span>
+          </div>,
           u.balance.toFixed(2),
           fmtStamp(u.joined),
           <div key="act" className="flex items-center gap-1">
@@ -141,7 +146,13 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
           </div>
           <div className="mt-4 space-y-2 text-[13px]">
             <div className="flex justify-between items-center">Active: <YesNo on={u.status === "active"} onChange={() => set({ status: u.status === "active" ? "inactive" : "active", loggedIn: false }, "User Status")} /></div>
-            <div className="flex justify-between items-center">Betting: <YesNo on={u.betting} onChange={() => set({ betting: !u.betting }, "User Betting")} /></div>
+            <div className="flex justify-between items-center">
+              <span>Betting Mode:</span>
+              <div className="flex items-center gap-1.5">
+                <YesNo on={u.betting} onChange={() => set({ betting: !u.betting }, `User mode set to ${!u.betting ? "Betting" : "Quiz"}`)} />
+                <Badge tone={u.betting ? "green" : "amber"}>{u.betting ? "Betting ON" : "Quiz Safe"}</Badge>
+              </div>
+            </div>
             <div className="flex justify-between items-center">Logout Status: {u.loggedIn ? <Btn size="sm" variant="green" onClick={() => set({ loggedIn: false }, "Force Logout")}>Logout Now</Btn> : <Badge tone="gray">Logged out</Badge>}</div>
             <div className="text-center pt-1">Security Password
               <div className="flex items-center justify-center gap-2 mt-0.5">

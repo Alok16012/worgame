@@ -43,12 +43,12 @@ export function MainSetting() {
         <div>
           <div className="flex items-center gap-2 font-bold text-base">
             <span className={`w-3 h-3 rounded-full animate-ping ${f.bettingDisabled ? "bg-amber-500" : "bg-emerald-500"}`} />
-            <span>App Mode: {f.bettingDisabled ? "🟡 Educational Quiz Mode (Play Store Safe)" : "🟢 Betting Mode (Active)"}</span>
+            <span>Default App Mode for New Registrations: {f.bettingDisabled ? "🟡 Educational Quiz Mode (Play Store Safe)" : "🟢 Betting Mode (Active)"}</span>
           </div>
           <p className="text-xs mt-1 text-slate-600 max-w-xl">
             {f.bettingDisabled
-              ? "All betting, wallet, deposit, withdraw, and bid screens are HIDDEN from players. The app functions as an Educational Market Quiz App with Play Quiz buttons and Idea submissions compliant with Google Play Store standards."
-              : "All Matka game types, bidding, wallet transactions, deposit, and withdraw features are active in the player app."}
+              ? "New users will register into Educational Quiz Safe Mode (all betting, wallet, and deposit/withdraw hidden). Existing users keep their individually set mode unless toggled in the Users section."
+              : "New users will register into Full Betting Mode (all markets, wallet, deposit, and withdraw active). Existing users keep their individually set mode."}
           </p>
         </div>
         <button
@@ -56,7 +56,7 @@ export function MainSetting() {
           onClick={() => setF({ ...f, bettingDisabled: !f.bettingDisabled })}
           className={`px-5 py-2.5 rounded-xl font-bold text-sm text-white shadow-md transition active:scale-95 shrink-0 ${f.bettingDisabled ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"}`}
         >
-          {f.bettingDisabled ? "Switch to Betting Mode (ON)" : "Switch to Educational Quiz Mode (Safe)"}
+          {f.bettingDisabled ? "Switch Default to Betting Mode (ON)" : "Switch Default to Quiz Safe Mode"}
         </button>
       </div>
 
@@ -93,7 +93,7 @@ export function MainSetting() {
           </Field>
         </div>
         <div className="grid md:grid-cols-2 gap-3 mt-5">
-          <Switch on={!f.bettingDisabled} onChange={(v) => setF({ ...f, bettingDisabled: !v })} label="Betting Enabled" hint="ON: Normal betting app. OFF: Educational Quiz safe mode for Play Store (hides all wallet & betting cues)." />
+          <Switch on={!f.bettingDisabled} onChange={(v) => setF({ ...f, bettingDisabled: !v })} label="New User Default Mode" hint="ON: New registrations default to Betting Mode. OFF: New registrations default to Educational Quiz Safe Mode (Play Store compliant)." />
           <Switch on={f.autoUpi} onChange={(v) => setF({ ...f, autoUpi: v })} label="Auto UPI Payment" hint="ON: Add Fund opens PhonePe / Google Pay / Paytm and credits the wallet. OFF: players send an Add Fund request that you approve in Fund Management." />
           <Switch on={f.otpEnabled ?? true} onChange={(v) => setF({ ...f, otpEnabled: v })} label="4-Digit OTP Verification" hint="Require players to verify 4-digit SMS OTP on registration and forgot password." />
           <Switch on={f.demoMode} onChange={(v) => setF({ ...f, demoMode: v })} label="Demo mode" hint="Ignore the withdraw time window. Market OPEN/CLOSE timings always apply." />

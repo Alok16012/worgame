@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { Dices, UserRound, Users } from "lucide-react";
-import { findGame, findUser, gameReport, isCredited, liveBids } from "../../lib/engine";
+import { findGame, findUser, gameReport, isCredited, liveBids, updateUser } from "../../lib/engine";
 import { fmtDate, fmtTime, inr, sum, ymd } from "../../lib/format";
 import { useStore } from "../../lib/store";
 import type { Bid, Session, Txn } from "../../lib/types";
 import { bidTypeLabel, GameSelect } from "../common";
-import { ANK_COLORS, BidBadge, Btn, Card, DataTable, Field, Modal, Table, useAdmin } from "../ui";
+import { ANK_COLORS, BidBadge, Btn, Card, DataTable, Field, Modal, Table, YesNo, useAdmin } from "../ui";
 
 export function Dashboard({ go }: { go: (r: string) => void }) {
   const { state: s, update } = useStore();
@@ -22,8 +22,8 @@ export function Dashboard({ go }: { go: (r: string) => void }) {
     });
     toast(
       !quizMode
-        ? "Switched to Educational Quiz Safe Mode (Play Store Safe)"
-        : "Switched to Betting Mode (Full Matka Game)",
+        ? "New users will default to Educational Quiz Safe Mode (Existing users unchanged)"
+        : "New users will default to Betting Mode (Existing users unchanged)",
       "ok"
     );
   };
@@ -59,9 +59,12 @@ export function Dashboard({ go }: { go: (r: string) => void }) {
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <h1 className="text-sm font-semibold tracking-wider text-slate-600">DASHBOARD</h1>
+        <div>
+          <h1 className="text-sm font-semibold tracking-wider text-slate-600">DASHBOARD</h1>
+          <p className="text-[11px] text-slate-500 mt-0.5">Control system defaults and manage user accounts</p>
+        </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 font-medium">App State:</span>
+          <span className="text-xs text-slate-500 font-medium">New User Default:</span>
           <button
             onClick={toggleBettingMode}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition active:scale-95 flex items-center gap-1.5 ${
@@ -69,26 +72,28 @@ export function Dashboard({ go }: { go: (r: string) => void }) {
                 ? "bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200"
                 : "bg-emerald-100 text-emerald-900 border border-emerald-300 hover:bg-emerald-200"
             }`}
+            title="Sets default mode for new incoming registrations (Existing users stay in their current mode)"
           >
             <span className={`w-2 h-2 rounded-full ${quizMode ? "bg-amber-500" : "bg-emerald-500"}`} />
-            {quizMode ? "Educational Quiz Mode (Safe)" : "Betting Mode (Active)"}
+            {quizMode ? "Quiz Mode (Safe)" : "Betting Mode (Active)"}
           </button>
         </div>
       </div>
 
-      {quizMode && (
-        <div className="mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-3">
-          <div>
-            <b>⚠️ Educational Quiz Safe Mode is Active:</b> All betting, wallet balance, and deposit/withdraw functions are hidden in the player app. Players see market charts, timings, educational quizzes, and idea submissions.
-          </div>
-          <button
-            onClick={toggleBettingMode}
-            className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold shrink-0 shadow-sm"
-          >
-            Turn Betting ON
-          </button>
+      <div className={`mb-4 p-3 rounded-xl border text-xs flex items-center justify-between gap-3 ${quizMode ? "bg-amber-50 border-amber-200 text-amber-900" : "bg-emerald-50 border-emerald-200 text-emerald-900"}`}>
+        <div>
+          <b>System Default Mode: {quizMode ? "🟡 Educational Quiz Safe Mode" : "🟢 Betting Mode (Active)"}</b>
+          <span className="ml-1 opacity-85">
+            — New users will register in {quizMode ? "Quiz Safe Mode (no betting/wallet)" : "Betting Mode"}. Existing users keep their individually set mode.
+          </span>
         </div>
-      )}
+        <button
+          onClick={toggleBettingMode}
+          className={`px-3 py-1 text-white rounded-lg font-bold shrink-0 shadow-sm text-xs ${quizMode ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"}`}
+        >
+          {quizMode ? "Switch Default to Betting" : "Switch Default to Quiz Safe"}
+        </button>
+      </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {kpis.map((k) => (
@@ -157,13 +162,18 @@ export function Dashboard({ go }: { go: (r: string) => void }) {
           <Btn variant="dark" onClick={() => go("users")}>View All Users ({s.users.length})</Btn>
         </div>
         <DataTable
-          head={["#", "Name", "Mobile", "Status", "Betting", "Wallet Balance", "Registered At", "Action"]}
+          head={["#", "Name", "Mobile", "Status", "Betting Mode", "Wallet Balance", "Registered At", "Action"]}
           rows={s.users.slice().reverse().slice(0, 10).map((u, i) => [
             i + 1,
             <button key="n" className="text-left font-semibold hover:text-[#0d6efd]" onClick={() => go(`users/${u.id}`)}>{u.name}</button>,
             u.mobile,
             <span key="s" className={u.status === "active" ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>{u.status === "active" ? "Active" : "Inactive"}</span>,
-            u.betting ? "Yes" : "No",
+            <div key="b" className="flex items-center gap-1.5">
+              <YesNo on={u.betting} onChange={() => update((d) => updateUser(d, u.id, { betting: !u.betting }, `User Mode changed to ${!u.betting ? "Betting" : "Quiz"}`))} />
+              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${u.betting ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                {u.betting ? "Betting" : "Quiz"}
+              </span>
+            </div>,
             inr(u.balance),
             u.joined,
             <Btn key="a" size="sm" onClick={() => go(`users/${u.id}`)}>Profile</Btn>,
