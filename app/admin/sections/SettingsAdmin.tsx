@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect as import_react_useEffect } from "react";
 import { Trash2 } from "lucide-react";
 import { log, nid, withdrawOpen } from "../../lib/engine";
 import { DAYS } from "../../lib/format";
@@ -14,6 +14,12 @@ function useSettingsForm<K extends keyof Settings>(keys: K[]) {
   const { state: s, update } = useStore();
   const { toast } = useAdmin();
   const [f, setF] = useState(() => structuredClone(Object.fromEntries(keys.map((k) => [k, s.settings[k]]))) as Pick<Settings, K>);
+  
+  const sliceStr = JSON.stringify(Object.fromEntries(keys.map((k) => [k, s.settings[k]])));
+  import_react_useEffect(() => {
+    setF(JSON.parse(sliceStr));
+  }, [sliceStr]);
+
   const save = (label: string, validate?: (v: Pick<Settings, K>) => string | null) => {
     const err = validate?.(f);
     if (err) return toast(err, "bad");
