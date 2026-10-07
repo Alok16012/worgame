@@ -8,6 +8,7 @@ import { useStore } from "../../lib/store";
 import type { Settings } from "../../lib/types";
 import { Btn, Card, Field, useAdmin } from "../ui";
 import { imageToBanner } from "../common";
+import { send4DigitOtp } from "../../lib/otp";
 
 function useSettingsForm<K extends keyof Settings>(keys: K[]) {
   const { state: s, update } = useStore();
@@ -34,9 +35,36 @@ function Switch({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
 type NumKey = "minDeposit" | "maxDeposit" | "minWithdraw" | "maxWithdraw" | "minBid" | "maxBid" | "welcomeBonus";
 
 export function MainSetting() {
-  const { f, setF, save } = useSettingsForm(["appName", "marquee", "website", "upiId", "version", "minDeposit", "maxDeposit", "minWithdraw", "maxWithdraw", "minBid", "maxBid", "welcomeBonus", "autoUpi", "demoMode", "maintenance", "otpApiKey", "smsUsername", "smsSenderName", "smsPeid", "smsTemplateId", "otpEnabled", "bettingDisabled", "quizTitle", "quizTimeLimit"]);
+  const { toast } = useAdmin();
+  const [testMobile, setTestMobile] = useState("");
+  const [testLoading, setTestLoading] = useState(false);
+  const { f, setF, save } = useSettingsForm(["appName", "marquee", "website", "upiId", "version", "minDeposit", "maxDeposit", "minWithdraw", "maxWithdraw", "minBid", "maxBid", "welcomeBonus", "autoUpi", "demoMode", "maintenance", "otpApiKey", "smsUsername", "smsSenderName", "smsPeid", "smsTemplateId", "smsMessageTemplate", "otpEnabled", "bettingDisabled", "quizTitle", "quizTimeLimit"]);
   const num = (k: NumKey, label: string) => <Field label={label}><input className="admin-input" inputMode="numeric" value={f[k]} onChange={(e) => setF({ ...f, [k]: Number(e.target.value.replace(/\D/g, "")) })} /></Field>;
   const text = (k: "appName" | "marquee" | "website" | "upiId" | "version" | "quizTitle", label: string) => <Field label={label}><input className="admin-input" value={f[k] || ""} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></Field>;
+
+  const handleTestSms = async () => {
+    if (testMobile.length !== 10) return toast("Enter valid 10-digit mobile number", "bad");
+    setTestLoading(true);
+    try {
+      const res = await send4DigitOtp(testMobile, {
+        apiKey: f.otpApiKey,
+        username: f.smsUsername,
+        senderName: f.smsSenderName,
+        peid: f.smsPeid,
+        templateId: f.smsTemplateId,
+        messageTemplate: f.smsMessageTemplate,
+      });
+      setTestLoading(false);
+      if (res.ok) {
+        toast(res.message || `Test OTP sent to ${testMobile}`, "ok");
+      } else {
+        toast(res.message || "Failed to send test SMS", "bad");
+      }
+    } catch (e: any) {
+      setTestLoading(false);
+      toast(e?.message || "SMS test error", "bad");
+    }
+  };
   return (
     <>
       <Card title="Main Setting">
@@ -97,6 +125,36 @@ export function MainSetting() {
                   onChange={(e) => setF({ ...f, smsTemplateId: e.target.value.trim() })}
                 />
               </Field>
+              <Field label="SMS Message Template (Use {OTP} placeholder)" className="md:col-span-3">
+                <input
+                  className="admin-input font-mono"
+                  placeholder="e.g. Your verification OTP is {OTP}. Please do not share it with anyone."
+                  value={f.smsMessageTemplate ?? "Your verification OTP is {OTP}. Please do not share it with anyone."}
+                  onChange={(e) => setF({ ...f, smsMessageTemplate: e.target.value })}
+                />
+              </Field>
+              <div className="md:col-span-3 bg-slate-50 border border-slate-200 rounded-lg p-3 mt-1 flex flex-col sm:flex-row items-center gap-3">
+                <div className="flex-1 text-xs text-slate-600">
+                  <b>Test Live SMS:</b> Enter any Indian number and test delivery with your current credentials.
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <input
+                    type="tel"
+                    placeholder="10-digit mobile"
+                    className="admin-input w-36 text-xs"
+                    value={testMobile}
+                    onChange={(e) => setTestMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTestSms}
+                    disabled={testLoading || testMobile.length !== 10}
+                    className="bg-[#0e1a3a] text-white px-3 py-1.5 rounded-md text-xs font-semibold hover:bg-blue-900 transition disabled:opacity-50"
+                  >
+                    {testLoading ? "Sending..." : "Send Test SMS"}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 

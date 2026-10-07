@@ -3,6 +3,12 @@
   publish = "out"
 
 [[redirects]]
+  from = "/api/aquasms/*"
+  to = "https://login.aquasms.com/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/admin/*"
   to = "/admin.html"
   status = 200

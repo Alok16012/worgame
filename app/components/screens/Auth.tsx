@@ -110,6 +110,7 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
       senderName: state.settings.smsSenderName,
       peid: state.settings.smsPeid,
       templateId: state.settings.smsTemplateId,
+      messageTemplate: state.settings.smsMessageTemplate,
     });
     setIsSending(false);
 
@@ -141,6 +142,7 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
       senderName: state.settings.smsSenderName,
       peid: state.settings.smsPeid,
       templateId: state.settings.smsTemplateId,
+      messageTemplate: state.settings.smsMessageTemplate,
     });
     setIsSending(false);
 

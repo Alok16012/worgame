@@ -54,6 +54,11 @@ function normalize(s: State): State {
     if (s.settings.bettingDisabled === undefined) s.settings.bettingDisabled = false;
     if (s.settings.quizTitle === undefined) s.settings.quizTitle = "Market Educational Quiz";
     if (s.settings.quizTimeLimit === undefined) s.settings.quizTimeLimit = 90;
+    if (s.settings.otpEnabled === undefined) s.settings.otpEnabled = true;
+    if (!s.settings.otpApiKey) s.settings.otpApiKey = "a0cb5b35-bdb3-425b-a648-2a0561771322";
+    if (!s.settings.smsUsername) s.settings.smsUsername = "8952074176";
+    if (!s.settings.smsSenderName) s.settings.smsSenderName = "SKLYAN";
+    if (!s.settings.smsMessageTemplate) s.settings.smsMessageTemplate = "Your verification OTP is {OTP}. Please do not share it with anyone.";
   }
   if (s.users && Array.isArray(s.users)) {
     const validUserIds = new Set(s.users.map((u) => u.id));

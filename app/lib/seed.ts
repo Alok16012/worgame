@@ -84,6 +84,7 @@ export function seedState(): State {
       otpApiKey: "a0cb5b35-bdb3-425b-a648-2a0561771322",
       smsUsername: "8952074176",
       smsSenderName: "SKLYAN",
+      smsMessageTemplate: "Your verification OTP is {OTP}. Please do not share it with anyone.",
       otpEnabled: true,
       bettingDisabled: false,
       quizTitle: "Market Educational Quiz",

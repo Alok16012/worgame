@@ -154,6 +154,7 @@ export interface Settings {
   smsSenderName?: string;
   smsPeid?: string;
   smsTemplateId?: string;
+  smsMessageTemplate?: string;
   otpEnabled?: boolean;
   /** ON: Normal Matka Betting App | OFF: Educational Quiz Safe Mode (Google Play Store compliant) */
   bettingDisabled: boolean;
