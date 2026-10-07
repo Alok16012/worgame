@@ -20,7 +20,7 @@ const SESSION_KEY = "wg_session";
 function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
   const { state } = useStore();
   const { user: u } = useSession();
-  const quizMode = u ? !u.betting : state.settings.bettingDisabled;
+  const quizMode = u ? !(u.betting ?? true) : state.settings.bettingDisabled;
   const go = (r: Route) => { onClose(); nav.push(r); };
 
   const bettingItems: [React.ReactNode, string, () => void][] = [
@@ -220,7 +220,7 @@ function Shell() {
   if (splash) return <Splash onDone={handleSplashDone} />;
   if (!uid || !user) return <><Auth onSignedIn={(id) => { signIn(id); showToast("Login successful!"); }} toast={showToast} /><Toast msg={toast} /></>;
 
-  const quizMode = user ? !user.betting : state.settings.bettingDisabled;
+  const quizMode = user ? !(user.betting ?? true) : state.settings.bettingDisabled;
   let screen: React.ReactNode;
   switch (route.name) {
     case "home": screen = <Home nav={nav} openMenu={() => setDrawer(true)} />; break;

@@ -15,9 +15,8 @@ const wa = (m: string) => `https://wa.me/91${m}`;
 export function UsersPage({ go }: { go: (r: string) => void }) {
   const { state: s, attempt, update } = useStore();
   const { toast, confirm } = useAdmin();
-  const [noBet, setNoBet] = useState(false);
   const [create, setCreate] = useState<null | { name: string; mobile: string; password: string }>(null);
-  const list = s.users.filter((u) => !noBet || !u.betting).slice().reverse();
+  const list = s.users.slice().reverse();
 
   const save = () => {
     if (!create) return;
@@ -58,13 +57,12 @@ export function UsersPage({ go }: { go: (r: string) => void }) {
   };
 
   return (
-    <Card title={noBet ? "Users In Quiz Mode (Betting OFF)" : "Users"} right={
+    <Card title="Users" right={
       <div className="flex gap-2">
-        <Btn variant={noBet ? "ghost" : "red"} onClick={() => setNoBet(!noBet)}><Ban size={15} /> {noBet ? "All Users" : "Quiz Mode Users (Betting OFF)"}</Btn>
         <Btn variant="dark" onClick={() => setCreate({ name: "", mobile: "", password: "" })}><Plus size={15} /> Create</Btn>
       </div>
     }>
-      <DataTable key={String(noBet)}
+      <DataTable
         head={["Sr No", "Name", "Mobile", "Status", "Betting Mode", "Wallet Balance", "Created At", "Action"]}
         rows={list.map((u, i) => [
           i + 1,
@@ -72,9 +70,9 @@ export function UsersPage({ go }: { go: (r: string) => void }) {
           <a key="m" href={wa(u.mobile)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1"><MessageCircle size={13} className="text-emerald-500" />{u.mobile}</a>,
           <span key="s" className={u.status === "active" ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>{u.status === "active" ? "Active" : "Inactive"}</span>,
           <div key="b" className="flex items-center gap-1.5">
-            <YesNo on={u.betting} onChange={() => update((d) => updateUser(d, u.id, { betting: !u.betting }, `User Mode changed to ${!u.betting ? "Betting" : "Quiz"}`))} />
-            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${u.betting ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-              {u.betting ? "Betting" : "Quiz"}
+            <YesNo on={u.betting ?? true} onChange={() => update((d) => updateUser(d, u.id, { betting: !(u.betting ?? true) }, `User Mode changed to ${(u.betting ?? true) ? "Quiz" : "Betting"}`))} />
+            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${(u.betting ?? true) ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+              {(u.betting ?? true) ? "Betting" : "Quiz"}
             </span>
           </div>,
           u.balance.toFixed(2),
@@ -148,8 +146,8 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
             <div className="flex justify-between items-center">
               <span>Betting Mode:</span>
               <div className="flex items-center gap-1.5">
-                <YesNo on={u.betting} onChange={() => set({ betting: !u.betting }, `User mode set to ${!u.betting ? "Betting" : "Quiz"}`)} />
-                <Badge tone={u.betting ? "green" : "amber"}>{u.betting ? "Betting ON" : "Quiz Safe"}</Badge>
+                <YesNo on={u.betting ?? true} onChange={() => set({ betting: !(u.betting ?? true) }, `User mode set to ${(u.betting ?? true) ? "Quiz" : "Betting"}`)} />
+                <Badge tone={(u.betting ?? true) ? "green" : "amber"}>{(u.betting ?? true) ? "Betting ON" : "Quiz Safe"}</Badge>
               </div>
             </div>
             <div className="flex justify-between items-center">Logout Status: {u.loggedIn ? <Btn size="sm" variant="green" onClick={() => set({ loggedIn: false }, "Force Logout")}>Logout Now</Btn> : <Badge tone="gray">Logged out</Badge>}</div>
