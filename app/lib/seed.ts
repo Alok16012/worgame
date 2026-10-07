@@ -82,6 +82,8 @@ export function seedState(): State {
       upiId: "shrikalyan@upi",
       autoUpi: true,
       otpApiKey: "a0cb5b35-bdb3-425b-a648-2a0561771322",
+      smsUsername: "8952074176",
+      smsSenderName: "SKLYAN",
       otpEnabled: true,
       bettingDisabled: false,
       quizTitle: "Market Educational Quiz",

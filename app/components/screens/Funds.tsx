@@ -1,17 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, ChevronDown, Code2, Hash, IndianRupee, MapPin, MessageCircle, Pencil, User } from "lucide-react";
-import { deposit, requestFund, requestWithdraw, updateUser } from "../../lib/engine";
-import { fmtDate, fmtTime } from "../../lib/format";
+import { Building2, CheckCircle2, ChevronDown, Clock, Code2, Copy, Hash, IndianRupee, MapPin, MessageCircle, Pencil, ShieldAlert, User } from "lucide-react";
+import { deposit, requestFund, requestWithdraw, submitUpiDeposit, updateUser } from "../../lib/engine";
+import { fmtDate, fmtTime, inr } from "../../lib/format";
 import { useStore } from "../../lib/store";
 import { PAY_METHODS, type Bank, type PayMethod } from "../../lib/types";
 import type { Nav } from "../nav";
 import { AlertBox, Header, IconField, Popup, Sheet, UserCard, useSession, whatsappLink } from "../ui";
 
 // UPI apps open through their deep links with the merchant UPI ID + amount prefilled.
-// On a phone the chosen app opens; in production the wallet is credited by the payment gateway's
-// callback. In this demo the player confirms with "I have paid".
 const APPS: { id: string; label: string; bg: string; fg: string; mark: string; scheme: string }[] = [
   { id: "PhonePe", label: "PhonePe", bg: "#5f259f", fg: "#fff", mark: "पे", scheme: "phonepe://pay" },
   { id: "Google Pay", label: "Google Pay", bg: "#fff", fg: "#4285f4", mark: "G", scheme: "tez://upi/pay" },
@@ -30,82 +28,223 @@ export function Deposit({ nav }: { nav: Nav }) {
   const s = state.settings;
   const [amount, setAmount] = useState("");
   const [paying, setPaying] = useState<null | string>(null);
+  const [utr, setUtr] = useState("");
+  const [copied, setCopied] = useState(false);
   const [alert, setAlert] = useState<string | null>(null);
   const amt = Number(amount) || 0;
 
-  const open = (app: (typeof APPS)[number]) => {
-    if (amt < s.minDeposit || amt > s.maxDeposit) return setAlert(`Deposit range is ₹${s.minDeposit} - ₹${s.maxDeposit}`);
+  const openUpiApp = (app: (typeof APPS)[number]) => {
+    if (amt < s.minDeposit || amt > s.maxDeposit) {
+      return setAlert(`Deposit range is ₹${s.minDeposit} - ₹${s.maxDeposit}`);
+    }
     setPaying(app.id);
+    setUtr("");
     window.location.href = upiLink(app.scheme, s.upiId, s.appName, amt);
   };
-  const sendRequest = () => {
+
+  const copyUpiId = () => {
+    navigator.clipboard?.writeText(s.upiId);
+    setCopied(true);
+    toast("UPI ID copied to clipboard!", "ok");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleManualRequest = () => {
+    if (amt < s.minDeposit || amt > s.maxDeposit) {
+      return setAlert(`Deposit range is ₹${s.minDeposit} - ₹${s.maxDeposit}`);
+    }
     const r = attempt((d) => requestFund(d, user.id, amt));
     if (!r.ok) return setAlert(r.error);
     toast("Add Fund request sent. Admin will contact you for payment.");
     setAmount("");
   };
-  // Full history lives in Wallet Statement; here only an open request is worth a reminder.
-  const pending = state.txns.find((x) => x.userId === user.id && x.type === "deposit" && x.status === "pending");
-  const confirmPaid = () => {
-    const r = attempt((d) => deposit(d, user.id, amt, paying ?? "UPI"));
-    setPaying(null);
+
+  const handleUtrSubmit = () => {
+    const cleanUtr = utr.trim().replace(/\D/g, "");
+    if (cleanUtr.length !== 12) {
+      return setAlert("Please enter the complete 12-digit UPI Reference / UTR Number from your payment receipt.");
+    }
+    const r = attempt((d) => submitUpiDeposit(d, user.id, amt, paying ?? "UPI", cleanUtr));
     if (!r.ok) return setAlert(r.error);
-    toast(`₹${amt} added to wallet`);
+
+    setPaying(null);
+    setUtr("");
     setAmount("");
+    toast(`Deposit request of ₹${amt} submitted! Admin will verify and credit your wallet.`, "ok");
   };
+
+  // Recent user deposit requests
+  const userDeposits = state.txns
+    .filter((x) => x.userId === user.id && x.type === "deposit")
+    .slice()
+    .reverse()
+    .slice(0, 5);
+
+  const pending = userDeposits.find((x) => x.status === "pending");
 
   return (
     <>
       <Header title="Add Fund" onBack={nav.back} />
       <div className="px-4 pt-4 space-y-4">
         <UserCard />
+
+        {/* Enter Amount Card */}
         <div className="ybox p-4">
           <div className="font-semibold text-slate-800">Enter Amount</div>
           <div className="relative mt-3">
             <IndianRupee size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#13306f]" />
-            <input className="w-full border border-slate-200 rounded-lg pl-9 pr-3 py-3 outline-none text-lg" inputMode="numeric" placeholder="Enter amount" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, "").slice(0, 7))} />
+            <input
+              className="w-full border border-slate-200 rounded-lg pl-9 pr-3 py-3 outline-none text-lg font-semibold"
+              inputMode="numeric"
+              placeholder="Enter amount"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value.replace(/\D/g, "").slice(0, 7))}
+            />
           </div>
           <div className="text-xs text-slate-500 mt-1.5">Deposit range: ₹{s.minDeposit} - ₹{s.maxDeposit}</div>
-          <div className="flex gap-2 mt-3 flex-wrap">{[500, 1000, 2000, 5000].map((v) => <button key={v} onClick={() => setAmount(String(v))} className="px-3 py-1.5 rounded-full border border-[#13306f]/30 text-[#13306f] text-sm">₹{v}</button>)}</div>
+          <div className="flex gap-2 mt-3 flex-wrap">
+            {[500, 1000, 2000, 5000].map((v) => (
+              <button
+                key={v}
+                onClick={() => setAmount(String(v))}
+                className="px-3.5 py-1.5 rounded-full border border-[#13306f]/30 font-medium text-[#13306f] text-sm hover:bg-[#13306f]/5"
+              >
+                ₹{v}
+              </button>
+            ))}
+          </div>
         </div>
-        {s.autoUpi ? (
+
+        {/* Pay With UPI App */}
+        <div className="ybox p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-semibold text-slate-800">Pay With UPI App</div>
+            <button onClick={copyUpiId} className="flex items-center gap-1 text-xs text-[#0d6efd] font-medium bg-blue-50 px-2.5 py-1 rounded-md">
+              <Copy size={13} /> {copied ? "Copied!" : "Copy UPI ID"}
+            </button>
+          </div>
+          <div className="grid grid-cols-4 gap-3">
+            {APPS.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => openUpiApp(a)}
+                className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
+              >
+                <span
+                  className="w-14 h-14 rounded-2xl grid place-items-center text-lg font-black shadow-sm border border-slate-100"
+                  style={{ background: a.bg, color: a.fg }}
+                >
+                  {a.mark}
+                </span>
+                <span className="text-[11px] font-medium text-slate-600">{a.label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="text-[11px] text-slate-500 mt-3.5 text-center">
+            Merchant UPI: <b className="font-mono text-slate-700">{s.upiId}</b>
+          </div>
+        </div>
+
+        {/* Pending Request Alert */}
+        {pending && (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs p-3.5 flex items-start gap-2.5">
+            <Clock size={16} className="text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              Your Add Fund request of <b>₹{pending.amount}</b> {pending.utr ? `(UTR: ${pending.utr})` : ""} is waiting for admin verification. Wallet will be credited once verified.
+            </div>
+          </div>
+        )}
+
+        {/* Recent Deposit Requests */}
+        {userDeposits.length > 0 && (
           <div className="ybox p-4">
-            <div className="font-semibold text-slate-800 mb-3">Pay With</div>
-            <div className="grid grid-cols-4 gap-3">
-              {APPS.map((a) => (
-                <button key={a.id} onClick={() => open(a)} className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
-                  <span className="w-14 h-14 rounded-2xl grid place-items-center text-lg font-black shadow border border-slate-100" style={{ background: a.bg, color: a.fg }}>{a.mark}</span>
-                  <span className="text-[11px] text-slate-600">{a.label}</span>
-                </button>
+            <div className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2.5">Recent Deposit History</div>
+            <div className="space-y-2">
+              {userDeposits.map((d) => (
+                <div key={d.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 text-xs">
+                  <div>
+                    <div className="font-semibold text-slate-800">₹{d.amount} · {d.mode || "UPI"}</div>
+                    <div className="text-slate-400 text-[10px]">{fmtDate(d.date)} {fmtTime(d.time)} {d.utr ? `· UTR: ${d.utr}` : ""}</div>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                      d.status === "approved" || d.status === "success"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : d.status === "rejected"
+                        ? "bg-rose-50 text-rose-700"
+                        : "bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {d.status === "approved" || d.status === "success" ? "Approved" : d.status === "rejected" ? "Rejected" : "Under Review"}
+                  </span>
+                </div>
               ))}
             </div>
-            <div className="text-[11px] text-slate-400 mt-3">Tap an app to pay ₹{amt || 0} to {s.upiId}</div>
-          </div>
-        ) : (
-          <div className="ybox p-4">
-            <button className="ybtn w-full py-3 rounded-xl" disabled={!amt} onClick={sendRequest}>Send Add Fund Request</button>
-            <div className="text-xs text-slate-500 mt-2 text-center">Admin will contact you on WhatsApp with payment details. The amount is added after payment is confirmed.</div>
           </div>
         )}
-        {pending && (
-          <div className="rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3">
-            Your Add Fund request of <b>₹{pending.amount}</b> is waiting for admin approval.
-          </div>
-        )}
-        <a href={whatsappLink(s.contact.whatsapp)} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1.5 text-sm text-slate-600 bg-white rounded-lg py-3">
-          For Fund Related Query <MessageCircle size={16} className="text-emerald-600" /> {s.contact.whatsapp}
+
+        {/* WhatsApp Help */}
+        <a
+          href={whatsappLink(s.contact.whatsapp)}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-center gap-1.5 text-xs text-slate-600 bg-white rounded-lg py-3 shadow-sm border border-slate-100"
+        >
+          For Fund Related Queries <MessageCircle size={15} className="text-emerald-600" /> {s.contact.whatsapp}
         </a>
       </div>
+
+      {/* UPI UTR Verification Bottom Sheet */}
       <Sheet open={!!paying} onClose={() => setPaying(null)}>
-        <div className="text-center">
-          <div className="text-slate-500 text-sm">Complete the payment in {paying}</div>
-          <div className="text-4xl font-bold text-[#13306f] my-4">₹{amt}</div>
-          <div className="text-xs text-slate-500 mb-5">If {paying} did not open, make sure the app is installed on this phone.</div>
-          <button className="ybtn w-full py-3 rounded-xl" onClick={confirmPaid}>I have paid</button>
-          <button className="w-full py-3 text-slate-500 text-sm" onClick={() => setPaying(null)}>Cancel</button>
-          <div className="text-[11px] text-slate-400">Demo: the wallet is credited when you tap “I have paid”. Live app credits it from the payment gateway.</div>
+        <div className="space-y-4">
+          <div className="text-center">
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Step 2: Confirm Payment</div>
+            <div className="text-3xl font-extrabold text-[#13306f] my-2">₹{amt}</div>
+            <div className="text-xs text-slate-600">
+              Pay to UPI ID: <b className="font-mono text-slate-800">{s.upiId}</b>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600 space-y-1">
+            <div>1. Complete the ₹{amt} payment in <b>{paying}</b>.</div>
+            <div>2. Copy the <b>12-digit UPI Ref / UTR Number</b> from your payment receipt.</div>
+            <div>3. Enter the 12-digit UTR below to submit for instant admin approval.</div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Enter 12-Digit UPI Reference / UTR Number <span className="text-rose-500">*</span>
+            </label>
+            <input
+              className="w-full border border-slate-300 rounded-xl px-3.5 py-3 text-base font-mono font-semibold tracking-wider outline-none focus:border-[#13306f]"
+              inputMode="numeric"
+              placeholder="e.g. 429182746192"
+              maxLength={12}
+              value={utr}
+              onChange={(e) => setUtr(e.target.value.replace(/\D/g, "").slice(0, 12))}
+            />
+            <div className="text-[10px] text-slate-400 mt-1">
+              {utr.length}/12 Digits Entered
+            </div>
+          </div>
+
+          <button
+            className="ybtn w-full py-3.5 rounded-xl font-bold text-sm shadow-md disabled:opacity-50"
+            disabled={utr.length !== 12}
+            onClick={handleUtrSubmit}
+          >
+            Submit UTR & Deposit Request
+          </button>
+
+          <button
+            className="w-full py-2.5 text-slate-500 text-xs font-medium"
+            onClick={() => setPaying(null)}
+          >
+            Cancel
+          </button>
         </div>
       </Sheet>
+
       <AlertBox open={!!alert} msg={alert ?? ""} onClose={() => setAlert(null)} />
     </>
   );

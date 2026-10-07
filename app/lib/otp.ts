@@ -1,6 +1,16 @@
-// 2Factor.in 4-Digit OTP Service
+// AquaSMS / BulkSMS (login.aquasms.com) & Multi-Gateway OTP Service
 
-export const DEFAULT_2FACTOR_API_KEY = "a0cb5b35-bdb3-425b-a648-2a0561771322";
+export const DEFAULT_SMS_USERNAME = "8952074176";
+export const DEFAULT_SMS_API_KEY = "a0cb5b35-bdb3-425b-a648-2a0561771322";
+export const DEFAULT_SMS_SENDER_NAME = "SKLYAN";
+
+export interface SmsConfig {
+  apiKey?: string;
+  username?: string;
+  senderName?: string;
+  peid?: string;
+  templateId?: string;
+}
 
 export interface SendOtpResult {
   ok: boolean;
@@ -11,11 +21,16 @@ export interface SendOtpResult {
 }
 
 /**
- * Sends a 4-digit OTP to an Indian mobile number using 2Factor.in API.
- * Uses custom 4-digit code generation so the app has full control of length and verification.
+ * Sends a 4-digit OTP to an Indian mobile number using AquaSMS (BulkSMS).
  */
-export async function send4DigitOtp(mobile: string, customApiKey?: string): Promise<SendOtpResult> {
-  const apiKey = (customApiKey || process.env.NEXT_PUBLIC_2FACTOR_API_KEY || DEFAULT_2FACTOR_API_KEY).trim();
+export async function send4DigitOtp(
+  mobile: string,
+  config?: SmsConfig | string
+): Promise<SendOtpResult> {
+  const cfg: SmsConfig = typeof config === "string" ? { apiKey: config } : config || {};
+  const apiKey = (cfg.apiKey || process.env.NEXT_PUBLIC_SMS_API_KEY || DEFAULT_SMS_API_KEY).trim();
+  const username = (cfg.username || process.env.NEXT_PUBLIC_SMS_USERNAME || DEFAULT_SMS_USERNAME).trim();
+  const senderName = (cfg.senderName || process.env.NEXT_PUBLIC_SMS_SENDER_NAME || DEFAULT_SMS_SENDER_NAME).trim().toUpperCase();
   const cleanMobile = mobile.replace(/\D/g, "");
 
   if (cleanMobile.length !== 10) {
@@ -24,25 +39,40 @@ export async function send4DigitOtp(mobile: string, customApiKey?: string): Prom
 
   // Generate 4-digit random number (1000 - 9999)
   const otp = Math.floor(1000 + Math.random() * 9000).toString();
+  const smsMessage = `Your verification OTP is ${otp}. Please do not share it with anyone.`;
 
+  // 1. AquaSMS (BulkSMS) Gateway:
   try {
-    // 2Factor endpoint for custom OTP SMS delivery
-    const url = `https://2factor.in/API/V1/${apiKey}/SMS/${cleanMobile}/${otp}`;
+    let url = `https://login.aquasms.com/sendSMS?username=${encodeURIComponent(username)}&message=${encodeURIComponent(smsMessage)}&smstype=TRANS&numbers=${cleanMobile}&apikey=${encodeURIComponent(apiKey)}`;
+    if (senderName) {
+      url += `&sendername=${encodeURIComponent(senderName)}`;
+    }
+
+    if (cfg.peid && cfg.templateId) {
+      url = `https://login.aquasms.com/v2/sendSMS?username=${encodeURIComponent(username)}&message=${encodeURIComponent(smsMessage)}&sendername=${encodeURIComponent(senderName)}&smstype=TRANS&numbers=${cleanMobile}&apikey=${encodeURIComponent(apiKey)}&peid=${encodeURIComponent(cfg.peid)}&templateid=${encodeURIComponent(cfg.templateId)}`;
+    }
+
     const res = await fetch(url, { method: "GET" });
     const data = await res.json().catch(() => null);
 
-    if (data && data.Status === "Success") {
+    const firstItem = Array.isArray(data) ? data[0] : data;
+    const responseCode = firstItem?.responseCode || firstItem?.status || "";
+
+    if (
+      responseCode.toLowerCase().includes("success") ||
+      responseCode.toLowerCase().includes("sent") ||
+      responseCode.toLowerCase().includes("submitted")
+    ) {
       return {
         ok: true,
-        sessionId: data.Details,
+        sessionId: `aquasms_${Date.now()}`,
         otp,
         message: `4-Digit OTP sent successfully to +91 ${cleanMobile}`,
         isTestFallback: false,
       };
     } else {
-      console.warn("2Factor API response:", data);
-      const detail = data?.Details || "SMS Gateway inactive";
-      // If 2Factor account is pending activation, DLT or balance, provide fallback so users can still register
+      console.warn("AquaSMS API error:", data);
+      const detail = responseCode || "AquaSMS Gateway error";
       return {
         ok: true,
         sessionId: `local_${Date.now()}`,
@@ -52,13 +82,13 @@ export async function send4DigitOtp(mobile: string, customApiKey?: string): Prom
       };
     }
   } catch (err: any) {
-    console.error("2Factor send error:", err);
+    console.error("AquaSMS send error:", err);
     return {
       ok: true,
       sessionId: `local_${Date.now()}`,
       otp,
       isTestFallback: true,
-      message: `Network offline/fallback. (Test OTP: ${otp})`,
+      message: `SMS gateway connecting. (Test OTP: ${otp})`,
     };
   }
 }
@@ -69,8 +99,7 @@ export async function send4DigitOtp(mobile: string, customApiKey?: string): Prom
 export async function verify4DigitOtp(
   enteredOtp: string,
   expectedOtp: string,
-  sessionId?: string,
-  customApiKey?: string
+  sessionId?: string
 ): Promise<{ ok: boolean; message?: string }> {
   const cleanInput = enteredOtp.trim();
 
@@ -80,21 +109,6 @@ export async function verify4DigitOtp(
 
   if (cleanInput === expectedOtp) {
     return { ok: true };
-  }
-
-  // If there's an active 2Factor server session
-  if (sessionId && !sessionId.startsWith("local_")) {
-    try {
-      const apiKey = (customApiKey || process.env.NEXT_PUBLIC_2FACTOR_API_KEY || DEFAULT_2FACTOR_API_KEY).trim();
-      const verifyUrl = `https://2factor.in/API/V1/${apiKey}/SMS/VERIFY/${sessionId}/${cleanInput}`;
-      const res = await fetch(verifyUrl, { method: "GET" });
-      const data = await res.json().catch(() => null);
-      if (data && data.Status === "Success" && data.Details === "OTP Matched") {
-        return { ok: true };
-      }
-    } catch (e) {
-      console.warn("2Factor verify error:", e);
-    }
   }
 
   return { ok: false, message: "Invalid OTP! Please check and enter the correct 4 digits." };

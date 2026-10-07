@@ -162,18 +162,12 @@ export function Dashboard({ go }: { go: (r: string) => void }) {
           <Btn variant="dark" onClick={() => go("users")}>View All Users ({s.users.length})</Btn>
         </div>
         <DataTable
-          head={["#", "Name", "Mobile", "Status", "Betting Mode", "Wallet Balance", "Registered At", "Action"]}
+          head={["#", "Name", "Mobile", "Status", "Wallet Balance", "Registered At", "Action"]}
           rows={s.users.slice().reverse().slice(0, 10).map((u, i) => [
             i + 1,
             <button key="n" className="text-left font-semibold hover:text-[#0d6efd]" onClick={() => go(`users/${u.id}`)}>{u.name}</button>,
             u.mobile,
             <span key="s" className={u.status === "active" ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>{u.status === "active" ? "Active" : "Inactive"}</span>,
-            <div key="b" className="flex items-center gap-1.5">
-              <YesNo on={u.betting} onChange={() => update((d) => updateUser(d, u.id, { betting: !u.betting }, `User Mode changed to ${!u.betting ? "Betting" : "Quiz"}`))} />
-              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${u.betting ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                {u.betting ? "Betting" : "Quiz"}
-              </span>
-            </div>,
             inr(u.balance),
             u.joined,
             <Btn key="a" size="sm" onClick={() => go(`users/${u.id}`)}>Profile</Btn>,

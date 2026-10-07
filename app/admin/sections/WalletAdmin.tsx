@@ -48,14 +48,17 @@ export function FundManagement() {
         <Stat label="Pending Add Fund Requests" value={`${pending.length} · ${inr(sum(pending, (x) => x.amount))}`} />
         <Stat label="Total Withdraw (Paid)" value={inr(sum(s.txns.filter((x) => x.type === "withdraw" && x.status === "approved"), (x) => x.amount))} tone="red" />
       </div>
-      <Card title={`Add Fund Request (${pending.length} pending)`}>
-        <p className="text-xs text-slate-500 mb-3">{s.settings.autoUpi ? "Auto UPI is ON, so players are credited automatically. Requests show up here when Auto UPI is OFF (Main Setting)." : "Auto UPI is OFF: players send requests. Contact them on WhatsApp, take the payment, then Approve."}</p>
-        <DataTable head={["Sr No", "User Name", "Mobile", "Amount", "Date", "Time", "Action"]}
+      <Card title={`Add Fund Requests (${pending.length} pending)`}>
+        <p className="text-xs text-slate-500 mb-3">Players pay via UPI / QR and submit their 12-digit UTR number. Verify the UTR in your bank / PhonePe / GPay account, then click <b>Approve</b> to credit their wallet.</p>
+        <DataTable head={["Sr No", "User Name", "Mobile", "Amount", "Mode", "12-Digit UTR", "Date", "Time", "Action"]}
           rows={pending.map((x, i) => { const u = findUser(s, x.userId)!; return [i + 1, u.name,
-            <a key="m" href={`https://wa.me/91${u.mobile}?text=${encodeURIComponent(`Hello ${u.name}, please pay ₹${x.amount} for your ${s.settings.appName} add fund request.`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-emerald-700">{u.mobile} <span className="text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded">WhatsApp</span></a>,
-            <b key="a">{inr(x.amount)}</b>, fmtDate(x.date), fmtTime(x.time),
+            <a key="m" href={`https://wa.me/91${u.mobile}?text=${encodeURIComponent(`Hello ${u.name}, regarding your ₹${x.amount} deposit request (UTR: ${x.utr || "N/A"}) in ${s.settings.appName}.`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-emerald-700">{u.mobile} <span className="text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded">WhatsApp</span></a>,
+            <b key="a">{inr(x.amount)}</b>,
+            <span key="mode" className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700">{x.mode || "UPI"}</span>,
+            <span key="utr" className="font-mono font-semibold text-slate-700 select-all">{x.utr || "Manual"}</span>,
+            fmtDate(x.date), fmtTime(x.time),
             <div key="b" className="flex gap-1.5"><Btn size="sm" variant="green" onClick={() => decide(x.id, "approved")}>Approve</Btn><Btn size="sm" variant="red" onClick={() => decide(x.id, "rejected")}>Reject</Btn></div>]; })}
-          text={pending.map((x) => { const u = findUser(s, x.userId)!; return `${u.name} ${u.mobile}`; })} />
+          text={pending.map((x) => { const u = findUser(s, x.userId)!; return `${u.name} ${u.mobile} ${x.utr ?? ""} ${x.mode ?? ""}`; })} />
       </Card>
       <Card className="mt-5" title="Add / Withdraw Fund">
         <div className="grid md:grid-cols-[2fr_1fr_1fr_2fr_auto] gap-4 items-end">

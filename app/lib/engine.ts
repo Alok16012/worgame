@@ -296,42 +296,69 @@ export function revertBids(s: State, gameId: number, date: string, onlyId?: numb
 
 /* ---------------- wallet ---------------- */
 
-function checkDeposit(s: State, amount: number) {
+/** Check deposit amount within admin configured limits. */
+export function checkDeposit(s: State, amount: number) {
   const { minDeposit: lo, maxDeposit: hi } = s.settings;
   if (!Number.isInteger(amount) || amount < lo || amount > hi) fail(`Deposit range is ${inr(lo)} - ${inr(hi)}`);
 }
 
-/** Auto UPI (setting ON): the payment is confirmed, credit straight away. */
-export function deposit(s: State, userId: number, amount: number, app: string) {
+/** 
+ * Safe UPI Deposit Submission:
+ * The player submits their 12-digit UTR number after completing the UPI payment.
+ * Request is created with status "pending" — wallet is only credited after Admin verifies & approves!
+ */
+export function submitUpiDeposit(s: State, userId: number, amount: number, app: string, utr: string) {
   const u = findUser(s, userId) ?? fail("User not found");
   checkDeposit(s, amount);
-  u.balance += amount;
-  // Credited straight away but "success" = not yet checked by admin (Auto Deposit History → Approve / Reject).
-  addTxn(s, userId, "deposit", "cr", amount, "Deposit Fund", { mode: app, utr: "UTR" + Math.floor(1e11 + Math.random() * 9e11), status: "success" });
+  const cleanUtr = utr.trim().replace(/\s+/g, "");
+  if (!/^\d{12}$/.test(cleanUtr)) {
+    fail("Please enter a valid 12-digit UPI Reference / UTR Number");
+  }
+  const duplicate = s.txns.some((t) => t.type === "deposit" && t.utr === cleanUtr && t.status !== "rejected");
+  if (duplicate) {
+    fail("This 12-digit UTR Number has already been submitted. Please check your transaction details.");
+  }
+  addTxn(s, userId, "deposit", "cr", amount, "UPI Deposit Request", {
+    mode: app || "UPI",
+    utr: cleanUtr,
+    status: "pending",
+  });
+  log(s, "UPI Deposit Request", `${u.name} submitted ₹${amount} via ${app} (UTR: ${cleanUtr})`);
 }
 
-/** Deposit money that is really in the user's wallet: auto UPI (checked or not) or an approved request. */
-export const isCredited = (t: Txn) => t.type === "deposit" && (t.status === "approved" || t.status === "success");
+/** Legacy alias for deposit request */
+export function deposit(s: State, userId: number, amount: number, app: string, utr?: string) {
+  if (utr && utr.trim().length === 12) {
+    return submitUpiDeposit(s, userId, amount, app, utr);
+  }
+  return requestFund(s, userId, amount);
+}
 
-/** Admin check of an auto UPI deposit. Reject takes the credited amount back out of the wallet. */
+/** Deposit money that is really in the user's wallet: approved request. */
+export const isCredited = (t: Txn) => t.type === "deposit" && t.status === "approved";
+
+/** Admin check of an auto UPI deposit. */
 export function decideAutoDeposit(s: State, txnId: number, status: "approved" | "rejected") {
   const t = s.txns.find((x) => x.id === txnId && x.type === "deposit") ?? fail("Deposit not found");
-  if (t.status !== "success") fail("Deposit already checked");
+  if (t.status === "approved" || t.status === "rejected") fail("Deposit already processed");
   const u = findUser(s, t.userId)!;
   t.status = status;
-  if (status === "rejected") {
-    u.balance -= t.amount;
-    t.remark = "Deposit rejected by admin — amount reversed";
+  if (status === "approved") {
+    u.balance += t.amount;
+    t.remark = "UPI Deposit approved by admin";
+  } else {
+    t.remark = "UPI Deposit rejected by admin";
   }
-  log(s, `Auto Deposit ${status}`, `${u.name} ${inr(t.amount)} ${t.mode ?? ""} ${t.utr ?? ""}${status === "rejected" && u.balance < 0 ? ` (wallet now ${inr(u.balance)})` : ""}`);
+  log(s, `UPI Deposit ${status}`, `${u.name} ${inr(t.amount)} ${t.mode ?? ""} ${t.utr ?? ""}`);
 }
 
 /** Manual mode (setting OFF): the player raises an Add Fund request; nothing is credited until the admin approves. */
 export function requestFund(s: State, userId: number, amount: number) {
-  findUser(s, userId) ?? fail("User not found");
+  const u = findUser(s, userId) ?? fail("User not found");
   checkDeposit(s, amount);
   if (s.txns.some((x) => x.userId === userId && x.type === "deposit" && x.status === "pending")) fail("You already have a pending Add Fund request");
   addTxn(s, userId, "deposit", "cr", amount, "Add fund request", { mode: "Manual", status: "pending" });
+  log(s, "Add Fund Request", `${u.name} requested ${inr(amount)}`);
 }
 
 export function decideFund(s: State, txnId: number, status: "approved" | "rejected") {
@@ -346,7 +373,7 @@ export function decideFund(s: State, txnId: number, status: "approved" | "reject
   const now = nowAt();
   t.date = now.date;
   t.time = now.time;
-  log(s, `Add Fund ${status}`, `${u.name} ${inr(t.amount)}`);
+  log(s, `Add Fund ${status}`, `${u.name} ${inr(t.amount)} ${t.mode ?? ""} ${t.utr ? `UTR: ${t.utr}` : ""}`);
 }
 
 const METHOD_FIELD = { PhonePe: "phonepe", "Google Pay": "gpay", Paytm: "paytm", "UPI ID": "upi" } as const;

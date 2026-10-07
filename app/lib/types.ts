@@ -150,6 +150,10 @@ export interface Settings {
   /** ON: Add Fund opens the UPI app and credits automatically. OFF: Add Fund sends a request the admin approves. */
   autoUpi: boolean;
   otpApiKey?: string;
+  smsUsername?: string;
+  smsSenderName?: string;
+  smsPeid?: string;
+  smsTemplateId?: string;
   otpEnabled?: boolean;
   /** ON: Normal Matka Betting App | OFF: Educational Quiz Safe Mode (Google Play Store compliant) */
   bettingDisabled: boolean;

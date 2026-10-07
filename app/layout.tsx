@@ -9,9 +9,8 @@ const poppins = Poppins({
   variable: "--font-poppins",
 });
 
-// Logo fonts: Cinzel for "KALYAN", Yatra One for the Devanagari "श्री कल्याण".
-const cinzel = Cinzel({ subsets: ["latin"], weight: ["700", "900"], display: "swap", variable: "--font-cinzel" });
-const yatra = Yatra_One({ subsets: ["devanagari", "latin"], weight: "400", display: "swap", variable: "--font-yatra" });
+const cinzel = Cinzel({ subsets: ["latin"], weight: "700", display: "swap", variable: "--font-cinzel" });
+const yatra = Yatra_One({ subsets: ["latin"], weight: "400", display: "swap", variable: "--font-yatra" });
 
 export const metadata: Metadata = {
   title: "Shri Kalyan — Matka • Starline • Gali Desawar",

@@ -104,7 +104,13 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
       return onSignedIn(r.value);
     }
 
-    const res = await send4DigitOtp(clean, state.settings.otpApiKey);
+    const res = await send4DigitOtp(clean, {
+      apiKey: state.settings.otpApiKey,
+      username: state.settings.smsUsername,
+      senderName: state.settings.smsSenderName,
+      peid: state.settings.smsPeid,
+      templateId: state.settings.smsTemplateId,
+    });
     setIsSending(false);
 
     if (!res.ok) {
@@ -129,7 +135,13 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
   const handleResendOtp = async () => {
     if (countdown > 0 || isSending) return;
     setIsSending(true);
-    const res = await send4DigitOtp(cleanMobile, state.settings.otpApiKey);
+    const res = await send4DigitOtp(cleanMobile, {
+      apiKey: state.settings.otpApiKey,
+      username: state.settings.smsUsername,
+      senderName: state.settings.smsSenderName,
+      peid: state.settings.smsPeid,
+      templateId: state.settings.smsTemplateId,
+    });
     setIsSending(false);
 
     if (!res.ok) {
@@ -159,7 +171,7 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
     }
 
     setIsVerifying(true);
-    const vResult = await verify4DigitOtp(otpValue, expectedOtp, sessionId, state.settings.otpApiKey);
+    const vResult = await verify4DigitOtp(otpValue, expectedOtp, sessionId);
 
     if (!vResult.ok) {
       setIsVerifying(false);

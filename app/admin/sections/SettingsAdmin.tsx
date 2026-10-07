@@ -34,32 +34,11 @@ function Switch({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
 type NumKey = "minDeposit" | "maxDeposit" | "minWithdraw" | "maxWithdraw" | "minBid" | "maxBid" | "welcomeBonus";
 
 export function MainSetting() {
-  const { f, setF, save } = useSettingsForm(["appName", "marquee", "website", "upiId", "version", "minDeposit", "maxDeposit", "minWithdraw", "maxWithdraw", "minBid", "maxBid", "welcomeBonus", "autoUpi", "demoMode", "maintenance", "otpApiKey", "otpEnabled", "bettingDisabled", "quizTitle", "quizTimeLimit"]);
+  const { f, setF, save } = useSettingsForm(["appName", "marquee", "website", "upiId", "version", "minDeposit", "maxDeposit", "minWithdraw", "maxWithdraw", "minBid", "maxBid", "welcomeBonus", "autoUpi", "demoMode", "maintenance", "otpApiKey", "smsUsername", "smsSenderName", "smsPeid", "smsTemplateId", "otpEnabled", "bettingDisabled", "quizTitle", "quizTimeLimit"]);
   const num = (k: NumKey, label: string) => <Field label={label}><input className="admin-input" inputMode="numeric" value={f[k]} onChange={(e) => setF({ ...f, [k]: Number(e.target.value.replace(/\D/g, "")) })} /></Field>;
   const text = (k: "appName" | "marquee" | "website" | "upiId" | "version" | "quizTitle", label: string) => <Field label={label}><input className="admin-input" value={f[k] || ""} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></Field>;
   return (
     <>
-      <div className={`p-4 rounded-xl mb-5 border-2 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${f.bettingDisabled ? "bg-amber-50 border-amber-300 text-amber-900" : "bg-emerald-50 border-emerald-300 text-emerald-900"}`}>
-        <div>
-          <div className="flex items-center gap-2 font-bold text-base">
-            <span className={`w-3 h-3 rounded-full animate-ping ${f.bettingDisabled ? "bg-amber-500" : "bg-emerald-500"}`} />
-            <span>Default App Mode for New Registrations: {f.bettingDisabled ? "🟡 Educational Quiz Mode (Play Store Safe)" : "🟢 Betting Mode (Active)"}</span>
-          </div>
-          <p className="text-xs mt-1 text-slate-600 max-w-xl">
-            {f.bettingDisabled
-              ? "New users will register into Educational Quiz Safe Mode (all betting, wallet, and deposit/withdraw hidden). Existing users keep their individually set mode unless toggled in the Users section."
-              : "New users will register into Full Betting Mode (all markets, wallet, deposit, and withdraw active). Existing users keep their individually set mode."}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setF({ ...f, bettingDisabled: !f.bettingDisabled })}
-          className={`px-5 py-2.5 rounded-xl font-bold text-sm text-white shadow-md transition active:scale-95 shrink-0 ${f.bettingDisabled ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"}`}
-        >
-          {f.bettingDisabled ? "Switch Default to Betting Mode (ON)" : "Switch Default to Quiz Safe Mode"}
-        </button>
-      </div>
-
       <Card title="Main Setting">
         <div className="grid md:grid-cols-3 gap-4">
           {text("appName", "App Name")}
@@ -74,14 +53,53 @@ export function MainSetting() {
           {text("version", "App Version")}
           {num("minBid", "Min Bid Amount")}
           {num("maxBid", "Max Bid Amount")}
-          <Field label="2Factor.in SMS API Key (4-Digit OTP)" className="md:col-span-3">
-            <input
-              className="admin-input font-mono"
-              placeholder="e.g. a0cb5b35-bdb3-425b-a648-2a0561771322"
-              value={f.otpApiKey || ""}
-              onChange={(e) => setF({ ...f, otpApiKey: e.target.value.trim() })}
-            />
-          </Field>
+          <div className="md:col-span-3 border-t border-slate-200 pt-4 mt-2">
+            <h4 className="font-semibold text-slate-800 text-sm mb-3">BulkSMS / AquaSMS Gateway Settings (login.aquasms.com)</h4>
+            <div className="grid md:grid-cols-3 gap-3">
+              <Field label="AquaSMS Username">
+                <input
+                  className="admin-input font-mono"
+                  placeholder="e.g. 8952074176"
+                  value={f.smsUsername ?? "8952074176"}
+                  onChange={(e) => setF({ ...f, smsUsername: e.target.value.trim() })}
+                />
+              </Field>
+              <Field label="AquaSMS API Key" className="md:col-span-2">
+                <input
+                  className="admin-input font-mono"
+                  placeholder="e.g. a0cb5b35-bdb3-425b-a648-2a0561771322"
+                  value={f.otpApiKey ?? "a0cb5b35-bdb3-425b-a648-2a0561771322"}
+                  onChange={(e) => setF({ ...f, otpApiKey: e.target.value.trim() })}
+                />
+              </Field>
+              <Field label="Sender Name (6 Letters)">
+                <input
+                  className="admin-input uppercase font-mono"
+                  placeholder="e.g. SKLYAN (from Sender Name menu)"
+                  maxLength={6}
+                  value={f.smsSenderName || ""}
+                  onChange={(e) => setF({ ...f, smsSenderName: e.target.value.trim().toUpperCase() })}
+                />
+              </Field>
+              <Field label="DLT PEID (Optional)">
+                <input
+                  className="admin-input font-mono"
+                  placeholder="Optional DLT PEID"
+                  value={f.smsPeid || ""}
+                  onChange={(e) => setF({ ...f, smsPeid: e.target.value.trim() })}
+                />
+              </Field>
+              <Field label="DLT Template ID (Optional)">
+                <input
+                  className="admin-input font-mono"
+                  placeholder="Optional DLT Template ID"
+                  value={f.smsTemplateId || ""}
+                  onChange={(e) => setF({ ...f, smsTemplateId: e.target.value.trim() })}
+                />
+              </Field>
+            </div>
+          </div>
+
           {text("quizTitle", "Quiz Title (Quiz Mode)")}
           <Field label="Quiz Time Limit (Seconds)">
             <input

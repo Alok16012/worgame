@@ -84,12 +84,6 @@ function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () =
   const [open, setOpen] = useState<Set<string>>(new Set(["Management", "Wallet Management"]));
   const [page, arg] = route.split("/") as [string, string | undefined];
   const cat = (["main", "starline", "gali"].includes(arg ?? "") ? arg : "main") as Cat;
-  const quizMode = state.settings.bettingDisabled;
-
-  const toggleBetting = () => {
-    update((d) => { d.settings.bettingDisabled = !d.settings.bettingDisabled; });
-    toast(!quizMode ? "New registrations will default to Educational Quiz Safe Mode (Existing users unchanged)" : "New registrations will default to Betting Mode (Existing users unchanged)", "ok");
-  };
 
   useEffect(() => {
     const g = NAV.find((n) => "group" in n && n.items.some((i) => isOn(route, i.id)));
@@ -132,18 +126,6 @@ function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () =
         <button className="text-white/80 p-1.5 lg:hidden" onClick={() => setDrawer(true)} aria-label="Menu"><Menu size={22} /></button>
         <Logo name={state.settings.appName} />
         <button onClick={() => nav("dashboard")} className="hidden sm:inline-flex items-center gap-2 bg-[#f5b301] text-white font-medium px-4 py-2 rounded-md ml-2"><Home size={16} /> View Dashboard</button>
-        <button
-          onClick={toggleBetting}
-          className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-bold text-xs shadow transition active:scale-95 ml-2 ${
-            quizMode
-              ? "bg-amber-400/20 text-amber-300 border border-amber-400/40 hover:bg-amber-400/30"
-              : "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 hover:bg-emerald-500/30"
-          }`}
-          title="Click to toggle between Betting Mode and Play Store Safe Educational Quiz Mode"
-        >
-          <span className={`w-2 h-2 rounded-full ${quizMode ? "bg-amber-400" : "bg-emerald-400"}`} />
-          {quizMode ? "Quiz Mode (Safe)" : "Betting Mode (Active)"}
-        </button>
         <div className="flex-1" />
         <a href="/" target="_blank" className="hidden md:inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm"><Smartphone size={16} /> Player App</a>
         <div className="flex items-center gap-2 pl-2">
