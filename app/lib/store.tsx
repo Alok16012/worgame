@@ -51,6 +51,7 @@ function normalize(s: State): State {
     }
   }
   if (s.settings) {
+    if (s.settings.autoUpi === undefined) s.settings.autoUpi = false;
     if (s.settings.bettingDisabled === undefined) s.settings.bettingDisabled = false;
     if (s.settings.quizTitle === undefined) s.settings.quizTitle = "Market Educational Quiz";
     if (s.settings.quizTimeLimit === undefined) s.settings.quizTimeLimit = 90;

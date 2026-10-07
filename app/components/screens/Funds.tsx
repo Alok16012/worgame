@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Building2, CheckCircle2, ChevronDown, Clock, Code2, Copy, Hash, IndianRupee, MapPin, MessageCircle, Pencil, ShieldAlert, User } from "lucide-react";
-import { deposit, requestFund, requestWithdraw, submitUpiDeposit, updateUser } from "../../lib/engine";
+import { autoUpiDeposit, deposit, requestFund, requestWithdraw, submitUpiDeposit, updateUser } from "../../lib/engine";
 import { fmtDate, fmtTime, inr } from "../../lib/format";
 import { useStore } from "../../lib/store";
 import { PAY_METHODS, type Bank, type PayMethod } from "../../lib/types";
@@ -37,9 +37,17 @@ export function Deposit({ nav }: { nav: Nav }) {
     if (amt < s.minDeposit || amt > s.maxDeposit) {
       return setAlert(`Deposit range is ₹${s.minDeposit} - ₹${s.maxDeposit}`);
     }
-    setPaying(app.id);
-    setUtr("");
-    window.location.href = upiLink(app.scheme, s.upiId, s.appName, amt);
+    if (s.autoUpi) {
+      const r = attempt((d) => autoUpiDeposit(d, user.id, amt, app.id));
+      if (!r.ok) return setAlert(r.error);
+      toast(`Deposit of ₹${amt} successful!`, "ok");
+      setAmount("");
+      window.location.href = upiLink(app.scheme, s.upiId, s.appName, amt);
+    } else {
+      setPaying(app.id);
+      setUtr("");
+      window.location.href = upiLink(app.scheme, s.upiId, s.appName, amt);
+    }
   };
 
   const copyUpiId = () => {

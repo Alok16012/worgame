@@ -326,6 +326,18 @@ export function submitUpiDeposit(s: State, userId: number, amount: number, app: 
   log(s, "UPI Deposit Request", `${u.name} submitted ₹${amount} via ${app} (UTR: ${cleanUtr})`);
 }
 
+/** Auto UPI Deposit (Instant Approval without UTR) */
+export function autoUpiDeposit(s: State, userId: number, amount: number, app: string) {
+  const u = findUser(s, userId) ?? fail("User not found");
+  checkDeposit(s, amount);
+  u.balance += amount;
+  addTxn(s, userId, "deposit", "cr", amount, `Auto UPI Deposit via ${app}`, {
+    mode: app,
+    status: "approved",
+  });
+  log(s, "Auto UPI Deposit", `${u.name} instantly added ₹${amount} via ${app}`);
+}
+
 /** Legacy alias for deposit request */
 export function deposit(s: State, userId: number, amount: number, app: string, utr?: string) {
   if (utr && utr.trim().length === 12) {
