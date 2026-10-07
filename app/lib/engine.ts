@@ -472,6 +472,16 @@ export function loginAdmin(s: State, username: string, password: string): AdminU
   return a;
 }
 
+export function changeAdminPassword(s: State, adminId: number, currentPassword: string, newPassword: string) {
+  const a = s.admins.find((x) => x.id === adminId) ?? fail("Admin account not found");
+  if (currentPassword !== (a.password || "admin@777")) fail("Current password is incorrect");
+  const next = newPassword.trim();
+  if (next.length < 4) fail("New password must be at least 4 characters");
+  if (next === currentPassword) fail("New password must be different from the current one");
+  a.password = next;
+  log(s, "Change Password", a.username, a.username);
+}
+
 export function updateUser(s: State, userId: number, patch: Partial<User>, action?: string) {
   const u = findUser(s, userId) ?? fail("User not found");
   Object.assign(u, patch);

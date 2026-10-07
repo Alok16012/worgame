@@ -1,11 +1,11 @@
 "use client";
 
 import React, { Component, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
-import { BarChart3, ChevronDown, ChevronUp, FileText, Gamepad2, Home, LogOut, Megaphone, Menu, Settings as SettingsIcon, Smartphone, Star, Target, Users, Wallet, Dices } from "lucide-react";
+import { BarChart3, ChevronDown, ChevronUp, FileText, Gamepad2, Home, KeyRound, LogOut, Megaphone, Menu, Settings as SettingsIcon, Smartphone, Star, Target, Users, Wallet, Dices } from "lucide-react";
 import { StoreProvider, useStore } from "../lib/store";
 import type { AdminUser, Cat } from "../lib/types";
-import { loginAdmin } from "../lib/engine";
-import { AdminProvider, useAdmin } from "./ui";
+import { changeAdminPassword, loginAdmin } from "../lib/engine";
+import { AdminProvider, Btn, Field, Modal, useAdmin } from "./ui";
 import { Dashboard } from "./sections/Dashboard";
 import { DeclareResult } from "./sections/Declare";
 import { Prediction } from "./sections/Prediction";
@@ -139,6 +139,7 @@ function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () =
   const { confirm, toast } = useAdmin();
   const [route, go] = useHashRoute();
   const [drawer, setDrawer] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
   const [open, setOpen] = useState<Set<string>>(new Set(["Management", "Wallet Management"]));
   const [page, arg] = route.split("/") as [string, string | undefined];
   const cat = (["main", "starline", "gali"].includes(arg ?? "") ? arg : "main") as Cat;
@@ -208,9 +209,11 @@ function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () =
             <span className="text-white/95 text-xs font-semibold leading-tight">{adminUser.name}</span>
             <span className="text-white/60 text-[10px] leading-tight">{adminUser.role}</span>
           </div>
-          <button onClick={onLogout} className="p-1.5 text-white/60 hover:text-white ml-1" title="Logout"><LogOut size={16} /></button>
+          <button onClick={() => setPwOpen(true)} className="p-1.5 text-white/60 hover:text-white ml-1" title="Change Password"><KeyRound size={16} /></button>
+          <button onClick={onLogout} className="p-1.5 text-white/60 hover:text-white" title="Logout"><LogOut size={16} /></button>
         </div>
       </header>
+      {pwOpen && <ChangePasswordModal adminUser={adminUser} onClose={() => setPwOpen(false)} />}
 
       <div className="flex">
         {drawer && <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={() => setDrawer(false)} />}
@@ -247,6 +250,30 @@ function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () =
         </main>
       </div>
     </div>
+  );
+}
+
+function ChangePasswordModal({ adminUser, onClose }: { adminUser: AdminUser; onClose: () => void }) {
+  const { attempt } = useStore();
+  const { toast } = useAdmin();
+  const [f, setF] = useState({ current: "", next: "", confirm: "" });
+
+  const submit = () => {
+    if (f.next !== f.confirm) return toast("New password and confirm password do not match", "bad");
+    const r = attempt((d) => changeAdminPassword(d, adminUser.id, f.current, f.next));
+    if (!r.ok) return toast(r.error, "bad");
+    toast("Password changed successfully", "ok");
+    onClose();
+  };
+
+  return (
+    <Modal title="Change My Password" onClose={onClose} footer={<><Btn variant="ghost" onClick={onClose}>Cancel</Btn><Btn onClick={submit}>Update Password</Btn></>}>
+      <div className="space-y-3">
+        <Field label="Current Password"><input type="password" className="admin-input" value={f.current} onChange={(e) => setF({ ...f, current: e.target.value })} autoFocus /></Field>
+        <Field label="New Password"><input type="password" className="admin-input" value={f.next} onChange={(e) => setF({ ...f, next: e.target.value })} placeholder="Minimum 4 characters" /></Field>
+        <Field label="Confirm New Password"><input type="password" className="admin-input" value={f.confirm} onChange={(e) => setF({ ...f, confirm: e.target.value })} onKeyDown={(e) => e.key === "Enter" && submit()} /></Field>
+      </div>
+    </Modal>
   );
 }
 
