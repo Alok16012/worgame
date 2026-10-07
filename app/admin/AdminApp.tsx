@@ -185,7 +185,21 @@ function Console({ adminUser, onLogout }: { adminUser: AdminUser; onLogout: () =
         <Logo name={state.settings.appName} />
         <button onClick={() => nav("dashboard")} className="hidden sm:inline-flex items-center gap-2 bg-[#f5b301] text-white font-medium px-4 py-2 rounded-md ml-2"><Home size={16} /> View Dashboard</button>
         <div className="flex-1" />
-        <a href="/" target="_blank" className="hidden md:inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm"><Smartphone size={16} /> Player App</a>
+        <button
+          onClick={async () => {
+            try {
+              if (navigator.share) {
+                await navigator.share({ title: state.settings.appName, text: `Play on ${state.settings.appName}!`, url: location.origin });
+              } else {
+                navigator.clipboard.writeText(location.origin);
+                alert("App Link copied to clipboard!");
+              }
+            } catch (e) {}
+          }}
+          className="hidden md:inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm cursor-pointer"
+        >
+          <Smartphone size={16} /> Share Player App
+        </button>
         <div className="flex items-center gap-2 pl-2">
           <div className="w-9 h-9 rounded bg-[#28a745] text-white grid place-items-center font-bold text-sm shadow">
             {adminUser.name.charAt(0).toUpperCase()}

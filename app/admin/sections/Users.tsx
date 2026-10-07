@@ -81,7 +81,6 @@ export function UsersPage({ go }: { go: (r: string) => void }) {
           fmtStamp(u.joined),
           <div key="act" className="flex items-center gap-1">
             <button onClick={() => go(`users/${u.id}`)} className="p-1.5 text-slate-600 hover:text-[#0d6efd]" aria-label="Edit"><Pencil size={15} /></button>
-            <button onClick={() => removeUser(u)} className="p-1.5 text-rose-500 hover:text-rose-700" aria-label="Delete"><Trash2 size={15} /></button>
           </div>,
         ])}
         text={list.map((u) => `${u.name} ${u.mobile}`)} />
@@ -177,34 +176,6 @@ export function UserDetail({ id, go }: { id: number; go: (r: string) => void }) 
             <div className="flex items-center gap-2">
               <Btn size="sm" variant="ghost" onClick={() => setEdit({ ...u })}>
                 <Pencil size={13} /> Edit
-              </Btn>
-              <Btn
-                size="sm"
-                variant="red"
-                onClick={async () => {
-                  if (
-                    !(await confirm({
-                      title: "Delete User",
-                      body: (
-                        <>
-                          Are you sure you want to permanently delete user <b>{u.name}</b> ({u.mobile})?
-                        </>
-                      ),
-                      ok: "Delete Permanently",
-                      tone: "red",
-                    }))
-                  )
-                    return;
-                  const r = attempt((d) => deleteUser(d, u.id));
-                  if (r.ok) {
-                    toast(`User ${u.name} deleted`, "ok");
-                    go("users");
-                  } else {
-                    toast(r.error, "bad");
-                  }
-                }}
-              >
-                <Trash2 size={13} /> Delete User
               </Btn>
             </div>
           }

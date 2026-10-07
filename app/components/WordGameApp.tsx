@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Award, Banknote, Bell, BookOpen, Gamepad2, History, Home as HomeIcon, Landmark, Lightbulb, LogOut, Percent, Phone, Play, ReceiptText, Share2, Star, Trophy, User as UserIcon, Wallet, Wrench } from "lucide-react";
+import { Share } from "@capacitor/share";
 import { findUser } from "../lib/engine";
 import { StoreProvider, useStore } from "../lib/store";
 import { SessionCtx, Toast, useSession } from "./ui";
@@ -37,7 +38,17 @@ function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
     [<BookOpen key="i" size={19} />, "How To Play", () => go({ name: "howto" })],
     [<Bell key="i" size={19} />, "Notifications", () => go({ name: "notices" })],
     [<Phone key="i" size={19} />, "Contact Us", () => go({ name: "contact" })],
-    [<Share2 key="i" size={19} />, "Share App", () => { onClose(); navigator.share?.({ title: state.settings.appName, url: location.origin }).catch(() => {}); }],
+    [<Share2 key="i" size={19} />, "Share App", async () => {
+      onClose();
+      try {
+        await Share.share({ title: state.settings.appName, text: `Play on ${state.settings.appName}!`, url: location.origin });
+      } catch (err) {
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(location.origin);
+          alert("Link copied to clipboard!");
+        }
+      }
+    }],
   ];
 
   const quizItems: [React.ReactNode, string, () => void][] = [
@@ -50,7 +61,17 @@ function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
     [<UserIcon key="i" size={19} />, "My Profile", () => go({ name: "profile" })],
     [<Bell key="i" size={19} />, "Notifications", () => go({ name: "notices" })],
     [<Phone key="i" size={19} />, "Contact Us", () => go({ name: "contact" })],
-    [<Share2 key="i" size={19} />, "Share App", () => { onClose(); navigator.share?.({ title: state.settings.appName, url: location.origin }).catch(() => {}); }],
+    [<Share2 key="i" size={19} />, "Share App", async () => {
+      onClose();
+      try {
+        await Share.share({ title: state.settings.appName, text: `Play Quiz on ${state.settings.appName}!`, url: location.origin });
+      } catch (err) {
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(location.origin);
+          alert("Link copied to clipboard!");
+        }
+      }
+    }],
   ];
 
   const items = quizMode ? quizItems : bettingItems;
