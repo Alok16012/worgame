@@ -6,14 +6,16 @@ import { autoUpiDeposit, deposit, requestFund, requestWithdraw, submitUpiDeposit
 import { fmtDate, fmtTime, inr } from "../../lib/format";
 import { useStore } from "../../lib/store";
 import { PAY_METHODS, type Bank, type PayMethod } from "../../lib/types";
+import { canUseUpiIntent, payWithUpiIntent } from "../../lib/upi";
 import type { Nav } from "../nav";
 import { AlertBox, Header, IconField, Popup, Sheet, UserCard, useSession, whatsappLink } from "../ui";
 
 // UPI apps open through their deep links with the merchant UPI ID + amount prefilled.
-const APPS: { id: string; label: string; bg: string; fg: string; mark: string; scheme: string }[] = [
-  { id: "PhonePe", label: "PhonePe", bg: "#5f259f", fg: "#fff", mark: "पे", scheme: "phonepe://pay" },
-  { id: "Google Pay", label: "Google Pay", bg: "#fff", fg: "#4285f4", mark: "G", scheme: "tez://upi/pay" },
-  { id: "Paytm", label: "Paytm", bg: "#00baf2", fg: "#fff", mark: "P", scheme: "paytmmp://pay" },
+// `pkg` targets the app directly for the native UPI intent (Auto UPI in the APK).
+const APPS: { id: string; label: string; bg: string; fg: string; mark: string; scheme: string; pkg?: string }[] = [
+  { id: "PhonePe", label: "PhonePe", bg: "#5f259f", fg: "#fff", mark: "पे", scheme: "phonepe://pay", pkg: "com.phonepe.app" },
+  { id: "Google Pay", label: "Google Pay", bg: "#fff", fg: "#4285f4", mark: "G", scheme: "tez://upi/pay", pkg: "com.google.android.apps.nbu.paisa.user" },
+  { id: "Paytm", label: "Paytm", bg: "#00baf2", fg: "#fff", mark: "P", scheme: "paytmmp://pay", pkg: "net.one97.paytm" },
   { id: "UPI", label: "Other UPI", bg: "#13306f", fg: "#f5c542", mark: "UPI", scheme: "upi://pay" },
 ];
 
@@ -31,23 +33,38 @@ export function Deposit({ nav }: { nav: Nav }) {
   const [utr, setUtr] = useState("");
   const [copied, setCopied] = useState(false);
   const [alert, setAlert] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const amt = Number(amount) || 0;
 
-  const openUpiApp = (app: (typeof APPS)[number]) => {
+  const openUpiApp = async (app: (typeof APPS)[number]) => {
+    if (busy) return;
     if (amt < s.minDeposit || amt > s.maxDeposit) {
       return setAlert(`Deposit range is ₹${s.minDeposit} - ₹${s.maxDeposit}`);
     }
-    if (s.autoUpi) {
-      const r = attempt((d) => autoUpiDeposit(d, user.id, amt, app.id));
-      if (!r.ok) return setAlert(r.error);
-      toast(`Deposit of ₹${amt} successful!`, "ok");
-      setAmount("");
-      window.location.href = upiLink(app.scheme, s.upiId, s.appName, amt);
-    } else {
-      setPaying(app.id);
-      setUtr("");
-      window.location.href = upiLink(app.scheme, s.upiId, s.appName, amt);
+    // Auto UPI: open the app via native intent and credit only when it reports SUCCESS.
+    // The website can't read the UPI result, so it always uses the UTR flow below.
+    if (s.autoUpi && canUseUpiIntent()) {
+      setBusy(true);
+      const res = await payWithUpiIntent({ vpa: s.upiId, payeeName: s.appName, amount: amt, txnRef: `SK${user.id}T${Date.now()}`, pkg: app.pkg });
+      setBusy(false);
+      if (res.status === "success") {
+        const r = attempt((d) => autoUpiDeposit(d, user.id, amt, app.id, res.txnId));
+        if (!r.ok) return setAlert(r.error);
+        toast(`₹${amt} wallet mein add ho gaye!`, "ok");
+        setAmount("");
+        return;
+      }
+      setAlert(res.message);
+      if (res.status === "failed") {
+        // Money may have left the account anyway; let them claim it with the UTR.
+        setPaying(app.id);
+        setUtr("");
+      }
+      return;
     }
+    setPaying(app.id);
+    setUtr("");
+    window.location.href = upiLink(app.scheme, s.upiId, s.appName, amt);
   };
 
   const copyUpiId = () => {

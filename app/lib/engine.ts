@@ -326,16 +326,20 @@ export function submitUpiDeposit(s: State, userId: number, amount: number, app: 
   log(s, "UPI Deposit Request", `${u.name} submitted ₹${amount} via ${app} (UTR: ${cleanUtr})`);
 }
 
-/** Auto UPI Deposit (Instant Approval without UTR) */
-export function autoUpiDeposit(s: State, userId: number, amount: number, app: string) {
+/** Auto UPI Deposit: credited only after the UPI app reports SUCCESS with a transaction ID. */
+export function autoUpiDeposit(s: State, userId: number, amount: number, app: string, txnId: string) {
   const u = findUser(s, userId) ?? fail("User not found");
   checkDeposit(s, amount);
+  const ref = txnId.trim();
+  if (!ref) fail("Payment transaction ID missing");
+  if (s.txns.some((t) => t.type === "deposit" && t.utr === ref && t.status !== "rejected")) fail("This payment has already been credited.");
   u.balance += amount;
   addTxn(s, userId, "deposit", "cr", amount, `Auto UPI Deposit via ${app}`, {
     mode: app,
+    utr: ref,
     status: "approved",
   });
-  log(s, "Auto UPI Deposit", `${u.name} instantly added ₹${amount} via ${app}`);
+  log(s, "Auto UPI Deposit", `${u.name} added ₹${amount} via ${app} (Txn: ${ref})`);
 }
 
 /** Legacy alias for deposit request */
