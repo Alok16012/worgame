@@ -58,8 +58,8 @@ function normalize(s: State): State {
     if (s.settings.otpEnabled === undefined) s.settings.otpEnabled = true;
     if (!s.settings.otpApiKey) s.settings.otpApiKey = "a0cb5b35-bdb3-425b-a648-2a0561771322";
     if (!s.settings.smsUsername) s.settings.smsUsername = "8952074176";
-    if (!s.settings.smsSenderName) s.settings.smsSenderName = "SKLYAN";
-    if (!s.settings.smsMessageTemplate) s.settings.smsMessageTemplate = "Your verification OTP is {OTP}. Please do not share it with anyone.";
+    if (!s.settings.smsSenderName || s.settings.smsSenderName === "SKLYAN") s.settings.smsSenderName = "CRTFUL";
+    if (!s.settings.smsMessageTemplate || s.settings.smsMessageTemplate === "Your verification OTP is {OTP}. Please do not share it with anyone.") s.settings.smsMessageTemplate = "Your OTP code for verification is : {OTP} CRTFUL";
   }
   if (s.users && Array.isArray(s.users)) {
     const validUserIds = new Set(s.users.map((u) => u.id));
