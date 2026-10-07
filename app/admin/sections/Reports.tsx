@@ -37,7 +37,7 @@ export function BidHistory({ cat }: { cat?: Cat }) {
     <>
       <Card title={cat ? `${CAT_LABEL[cat]} Bid History` : "Bid History Report"} right={
         <Btn variant="ghost" size="sm" onClick={() => downloadCsv(`bids-${f.from}-${f.to}.csv`, ["User", "Mobile", "Game", "Type", "Session", "Number", "Amount", "Win", "Status", "Date", "Time"],
-          list.map((b) => { const u = findUser(s, b.userId)!; return [u.name, u.mobile, findGame(s, b.gameId)?.name ?? "", bidTypeLabel(b), sessionLabel(b), b.value, b.amount, b.win ?? 0, b.status, b.date, b.time]; }))}><Download size={14} /> Export</Btn>}>
+          list.map((b) => { const u = findUser(s, b.userId); return [u?.name ?? "Deleted User", u?.mobile ?? "—", findGame(s, b.gameId)?.name ?? "", bidTypeLabel(b), sessionLabel(b), b.value, b.amount, b.win ?? 0, b.status, b.date, b.time]; }))}><Download size={14} /> Export</Btn>}>
         <div className="grid sm:grid-cols-3 xl:grid-cols-[1fr_1fr_1.4fr_1fr_1fr_auto] gap-4 items-end">
           <Field label="From Date"><input type="date" className="admin-input" value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value })} /></Field>
           <Field label="To Date"><input type="date" className="admin-input" value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} /></Field>
@@ -59,9 +59,9 @@ export function BidHistory({ cat }: { cat?: Cat }) {
       </div>
       <Card>
         <DataTable head={["Sr No", "User Name", "Mobile", "Game Name", "Game Type", "Session", "Number", "Amount", "Win", "Status", "Bid Time", "Action"]}
-          rows={list.map((b, i) => { const u = findUser(s, b.userId)!; return [i + 1, u.name, u.mobile, findGame(s, b.gameId)?.name, bidTypeLabel(b), sessionLabel(b), <b key="v">{b.value}</b>, b.amount, b.win ?? "—", <BidBadge key="s" s={b.status} />, `${fmtDate(b.date)} ${fmtTime(b.time)}`,
+          rows={list.map((b, i) => { const u = findUser(s, b.userId); return [i + 1, u?.name ?? "Deleted User", u?.mobile ?? "—", findGame(s, b.gameId)?.name, bidTypeLabel(b), sessionLabel(b), <b key="v">{b.value}</b>, b.amount, b.win ?? "—", <BidBadge key="s" s={b.status} />, `${fmtDate(b.date)} ${fmtTime(b.time)}`,
             b.status === "pending" ? <Btn key="e" size="sm" variant="ghost" onClick={() => setEditing(b)}><Pencil size={12} /> Edit</Btn> : ""]; })}
-          text={list.map((b) => { const u = findUser(s, b.userId)!; return `${u.name} ${u.mobile} ${b.value}`; })} />
+          text={list.map((b) => { const u = findUser(s, b.userId); return `${u?.name ?? "Deleted User"} ${u?.mobile ?? ""} ${b.value}`; })} />
       </Card>
       {editing && <EditBidModal bid={editing} onClose={() => setEditing(null)} />}
     </>

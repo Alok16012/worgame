@@ -29,10 +29,10 @@ export function FundManagement() {
 
   const decide = async (id: number, st: "approved" | "rejected") => {
     const x = s.txns.find((t) => t.id === id)!;
-    const u = findUser(s, x.userId)!;
+    const u = findUser(s, x.userId);
     const ok = await confirm({
       title: st === "approved" ? "Approve Add Fund" : "Reject Add Fund",
-      body: st === "approved" ? <>Confirm you received <b>{inr(x.amount)}</b> from <b>{u.name}</b> ({u.mobile}). The amount will be added to the wallet.</> : <>Reject the <b>{inr(x.amount)}</b> request of <b>{u.name}</b>? Nothing is added to the wallet.</>,
+      body: st === "approved" ? <>Confirm you received <b>{inr(x.amount)}</b> from <b>{u?.name ?? "User"}</b> ({u?.mobile ?? "—"}). The amount will be added to the wallet.</> : <>Reject the <b>{inr(x.amount)}</b> request of <b>{u?.name ?? "User"}</b>? Nothing is added to the wallet.</>,
       ok: st === "approved" ? "Approve" : "Reject", tone: st === "approved" ? "green" : "red",
     });
     if (!ok) return;
@@ -51,14 +51,14 @@ export function FundManagement() {
       <Card title={`Add Fund Requests (${pending.length} pending)`}>
         <p className="text-xs text-slate-500 mb-3">Players pay via UPI / QR and submit their 12-digit UTR number. Verify the UTR in your bank / PhonePe / GPay account, then click <b>Approve</b> to credit their wallet.</p>
         <DataTable head={["Sr No", "User Name", "Mobile", "Amount", "Mode", "12-Digit UTR", "Date", "Time", "Action"]}
-          rows={pending.map((x, i) => { const u = findUser(s, x.userId)!; return [i + 1, u.name,
-            <a key="m" href={`https://wa.me/91${u.mobile}?text=${encodeURIComponent(`Hello ${u.name}, regarding your ₹${x.amount} deposit request (UTR: ${x.utr || "N/A"}) in ${s.settings.appName}.`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-emerald-700">{u.mobile} <span className="text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded">WhatsApp</span></a>,
+          rows={pending.map((x, i) => { const u = findUser(s, x.userId); return [i + 1, u?.name ?? "Deleted User",
+            u?.mobile ? <a key="m" href={`https://wa.me/91${u.mobile}?text=${encodeURIComponent(`Hello ${u.name}, regarding your ₹${x.amount} deposit request (UTR: ${x.utr || "N/A"}) in ${s.settings.appName}.`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-emerald-700">{u.mobile} <span className="text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded">WhatsApp</span></a> : "—",
             <b key="a">{inr(x.amount)}</b>,
             <span key="mode" className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700">{x.mode || "UPI"}</span>,
             <span key="utr" className="font-mono font-semibold text-slate-700 select-all">{x.utr || "Manual"}</span>,
             fmtDate(x.date), fmtTime(x.time),
             <div key="b" className="flex gap-1.5"><Btn size="sm" variant="green" onClick={() => decide(x.id, "approved")}>Approve</Btn><Btn size="sm" variant="red" onClick={() => decide(x.id, "rejected")}>Reject</Btn></div>]; })}
-          text={pending.map((x) => { const u = findUser(s, x.userId)!; return `${u.name} ${u.mobile} ${x.utr ?? ""} ${x.mode ?? ""}`; })} />
+          text={pending.map((x) => { const u = findUser(s, x.userId); return `${u?.name ?? "Deleted User"} ${u?.mobile ?? ""} ${x.utr ?? ""} ${x.mode ?? ""}`; })} />
       </Card>
       <Card className="mt-5" title="Add / Withdraw Fund">
         <div className="grid md:grid-cols-[2fr_1fr_1fr_2fr_auto] gap-4 items-end">
@@ -76,8 +76,8 @@ export function FundManagement() {
       </Card>
       <Card className="mt-5" title="Fund History">
         <DataTable head={["Sr No", "User Name", "Mobile", "Amount", "Transaction", "Mode", "Remark", "Date", "Status"]}
-          rows={list.map((x, i) => { const u = findUser(s, x.userId)!; return [i + 1, u.name, u.mobile, inr(x.amount), <span key="t" className={x.dir === "cr" ? "text-emerald-600" : "text-rose-600"}>{x.dir === "cr" ? "Credit" : "Debit"}</span>, x.mode ?? "—", x.remark, `${fmtDate(x.date)} ${fmtTime(x.time)}`, <span key="s">{fundBadge(x.status)}</span>]; })}
-          text={list.map((x) => { const u = findUser(s, x.userId)!; return `${u.name} ${u.mobile} ${x.mode}`; })} />
+          rows={list.map((x, i) => { const u = findUser(s, x.userId); return [i + 1, u?.name ?? "Deleted User", u?.mobile ?? "—", inr(x.amount), <span key="t" className={x.dir === "cr" ? "text-emerald-600" : "text-rose-600"}>{x.dir === "cr" ? "Credit" : "Debit"}</span>, x.mode ?? "—", x.remark, `${fmtDate(x.date)} ${fmtTime(x.time)}`, <span key="s">{fundBadge(x.status)}</span>]; })}
+          text={list.map((x) => { const u = findUser(s, x.userId); return `${u?.name ?? "Deleted User"} ${u?.mobile ?? ""} ${x.mode}`; })} />
       </Card>
     </>
   );
@@ -93,10 +93,10 @@ export function WithdrawManagement({ go }: { go: (r: string) => void }) {
 
   const act = async (id: number, st: "approved" | "rejected") => {
     const x = all.find((t) => t.id === id)!;
-    const u = findUser(s, x.userId)!;
+    const u = findUser(s, x.userId);
     const ok = await confirm({
       title: st === "approved" ? "Approve Withdraw" : "Reject Withdraw",
-      body: st === "approved" ? <>Confirm you have paid <b>{inr(x.amount)}</b> to {u.name} — {x.payTo}.</> : <>Reject <b>{inr(x.amount)}</b> of {u.name}? The amount goes back to the user&apos;s wallet and the request stays here as <b className="text-rose-600">Rejected</b>.</>,
+      body: st === "approved" ? <>Confirm you have paid <b>{inr(x.amount)}</b> to {u?.name ?? "User"} — {x.payTo}.</> : <>Reject <b>{inr(x.amount)}</b> of {u?.name ?? "User"}? The amount goes back to the user&apos;s wallet and the request stays here as <b className="text-rose-600">Rejected</b>.</>,
       ok: st === "approved" ? "Approve" : "Reject", tone: st === "approved" ? "green" : "red",
     });
     if (!ok) return;
@@ -109,12 +109,12 @@ export function WithdrawManagement({ go }: { go: (r: string) => void }) {
       <Tabs value={tab} onChange={setTab} items={[{ id: "all", label: `All (${all.length})` }, { id: "pending", label: `Pending (${n("pending")})` }, { id: "approved", label: `Approved (${n("approved")})` }, { id: "rejected", label: `Rejected (${n("rejected")})` }]} />
       <DataTable key={tab} head={["Sr No", "User Name", "Mobile", "Amount", "Pay To", "Wallet", "Date", "Time", "Action / Status"]}
         rows={list.map((x, i) => {
-          const u = findUser(s, x.userId)!;
-          return [i + 1, <button key="u" className="hover:text-[#0d6efd]" onClick={() => go(`users/${u.id}`)}>{u.name}</button>, u.mobile, <b key="a">{inr(x.amount)}</b>, <span key="p" className="whitespace-normal">{x.payTo}</span>, inr(u.balance), fmtDate(x.date), fmtTime(x.time),
+          const u = findUser(s, x.userId);
+          return [i + 1, u ? <button key="u" className="hover:text-[#0d6efd]" onClick={() => go(`users/${u.id}`)}>{u.name}</button> : "Deleted User", u?.mobile ?? "—", <b key="a">{inr(x.amount)}</b>, <span key="p" className="whitespace-normal">{x.payTo}</span>, u ? inr(u.balance) : "—", fmtDate(x.date), fmtTime(x.time),
             x.status === "pending" ? <div key="b" className="flex gap-1.5"><Btn size="sm" variant="green" onClick={() => act(x.id, "approved")}>Approve</Btn><Btn size="sm" variant="red" onClick={() => act(x.id, "rejected")}>Reject</Btn></div>
               : x.status === "approved" ? <Badge key="s" tone="green">Approved</Badge> : <Badge key="s" tone="red">Rejected · Refunded</Badge>];
         })}
-        text={list.map((x) => { const u = findUser(s, x.userId)!; return `${u.name} ${u.mobile} ${x.status}`; })} />
+        text={list.map((x) => { const u = findUser(s, x.userId); return `${u?.name ?? "Deleted User"} ${u?.mobile ?? ""} ${x.status}`; })} />
     </Card>
   );
 }
@@ -131,12 +131,12 @@ export function AutoDeposit() {
 
   const act = async (id: number, st: "approved" | "rejected") => {
     const x = auto.find((t) => t.id === id)!;
-    const u = findUser(s, x.userId)!;
+    const u = findUser(s, x.userId);
     const ok = await confirm({
       title: st === "approved" ? "Approve Deposit" : "Reject Deposit",
       body: st === "approved"
-        ? <>Confirm <b>{inr(x.amount)}</b> from <b>{u.name}</b> ({x.mode}, {x.utr}) is received in your account.</>
-        : <>Payment of <b>{inr(x.amount)}</b> by <b>{u.name}</b> not received? Rejecting takes {inr(x.amount)} back out of the wallet (current balance {inr(u.balance)}{u.balance < x.amount ? <b className="text-rose-600"> — wallet will go negative</b> : null}).</>,
+        ? <>Confirm <b>{inr(x.amount)}</b> from <b>{u?.name ?? "User"}</b> ({x.mode}, {x.utr}) is received in your account.</>
+        : <>Payment of <b>{inr(x.amount)}</b> by <b>{u?.name ?? "User"}</b> not received? Rejecting takes {inr(x.amount)} back out of the wallet (current balance {inr(u?.balance ?? 0)}{(u?.balance ?? 0) < x.amount ? <b className="text-rose-600"> — wallet will go negative</b> : null}).</>,
       ok: st === "approved" ? "Approve" : "Reject", tone: st === "approved" ? "green" : "red",
     });
     if (!ok) return;
@@ -156,12 +156,12 @@ export function AutoDeposit() {
       <div className="text-sm text-slate-600 mb-3">Total: <b>{inr(sum(list, (x) => x.amount))}</b> in {list.length} deposits</div>
       <DataTable key={tab} head={["#", "User Name", "Mobile", "Amount", "UPI App", "UTR", "Wallet", "Date", "Action / Status"]}
         rows={list.map((x, i) => {
-          const u = findUser(s, x.userId)!;
-          return [i + 1, u.name, u.mobile, <b key="a">{inr(x.amount)}</b>, x.mode, x.utr, inr(u.balance), `${fmtDate(x.date)} ${fmtTime(x.time)}`,
+          const u = findUser(s, x.userId);
+          return [i + 1, u?.name ?? "Deleted User", u?.mobile ?? "—", <b key="a">{inr(x.amount)}</b>, x.mode, x.utr, u ? inr(u.balance) : "—", `${fmtDate(x.date)} ${fmtTime(x.time)}`,
             x.status === "success" ? <div key="b" className="flex gap-1.5"><Btn size="sm" variant="green" onClick={() => act(x.id, "approved")}>Approve</Btn><Btn size="sm" variant="red" onClick={() => act(x.id, "rejected")}>Reject</Btn></div>
               : x.status === "rejected" ? <Badge key="s" tone="red">Rejected · Reversed</Badge> : <Badge key="s" tone="green">Approved</Badge>];
         })}
-        text={list.map((x) => { const u = findUser(s, x.userId)!; return `${u.name} ${u.mobile} ${x.utr}`; })} />
+        text={list.map((x) => { const u = findUser(s, x.userId); return `${u?.name ?? "Deleted User"} ${u?.mobile ?? ""} ${x.utr}`; })} />
     </Card>
   );
 }

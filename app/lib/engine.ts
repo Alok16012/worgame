@@ -479,6 +479,8 @@ export function deleteUser(s: State, userId: number) {
   if (idx === -1) fail("User not found");
   const u = s.users[idx];
   s.users.splice(idx, 1);
+  s.bids = (s.bids || []).filter((b) => b.userId !== userId);
+  s.txns = (s.txns || []).filter((t) => t.userId !== userId);
   log(s, "Delete User", `${u.name} (${u.mobile})`);
 }
 

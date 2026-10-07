@@ -12,10 +12,10 @@ import { Btn, Field, Modal, useAdmin } from "./ui";
 export function EditBidModal({ bid, onClose }: { bid: Bid; onClose: () => void }) {
   const { state: s, attempt } = useStore();
   const { toast } = useAdmin();
-  const game = findGame(s, bid.gameId)!;
-  const u = findUser(s, bid.userId)!;
+  const game = findGame(s, bid.gameId);
+  const u = findUser(s, bid.userId);
   const [f, setF] = useState({ gameId: bid.gameId, type: bid.type, session: (bid.session ?? "open") as Session, value: bid.value, amount: String(bid.amount) });
-  const sessioned = game.cat === "main" && f.type !== "jodi" && f.type !== "full_sangam";
+  const sessioned = game?.cat === "main" && f.type !== "jodi" && f.type !== "full_sangam";
   const hint: Partial<Record<GameType, string>> = { single_ank: "0-9", jodi: "00-99", single_pana: "e.g. 123", double_pana: "e.g. 112", triple_pana: "e.g. 777", half_sangam: "pana-digit, e.g. 123-5", full_sangam: "pana-pana, e.g. 123-456", left_digit: "0-9", right_digit: "0-9" };
 
   const save = () => {
@@ -29,16 +29,16 @@ export function EditBidModal({ bid, onClose }: { bid: Bid; onClose: () => void }
 
   return (
     <Modal title="Edit Bid" onClose={onClose} footer={<><Btn variant="ghost" onClick={onClose}>Close</Btn><Btn onClick={save}>Update</Btn></>}>
-      <div className="text-xs text-slate-500 mb-4">{u.name} ({u.mobile}) · placed {fmtDate(bid.date)} {fmtTime(bid.time)} · {game.name} {TYPE_LABEL[bid.type]} <b>{bid.value}</b> · {inr(bid.amount)}</div>
+      <div className="text-xs text-slate-500 mb-4">{u?.name ?? "Deleted User"} ({u?.mobile ?? "—"}) · placed {fmtDate(bid.date)} {fmtTime(bid.time)} · {game?.name ?? "Game"} {TYPE_LABEL[bid.type]} <b>{bid.value}</b> · {inr(bid.amount)}</div>
       <div className="grid sm:grid-cols-2 gap-3">
         <Field label="Game Name">
           <select className="admin-input" value={f.gameId} onChange={(e) => setF({ ...f, gameId: Number(e.target.value) })}>
-            {s.games.filter((g) => g.cat === game.cat).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            {s.games.filter((g) => !game || g.cat === game.cat).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
         </Field>
         <Field label="Game Type">
           <select className="admin-input" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value as GameType })}>
-            {CAT_TYPES[game.cat].map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
+            {CAT_TYPES[game?.cat ?? "main"].map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
           </select>
         </Field>
         {sessioned && (

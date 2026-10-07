@@ -46,8 +46,8 @@ export function Dashboard({ go }: { go: (r: string) => void }) {
     { l: "Inactive Users", v: s.users.length - active, icon: <UserRound size={56} />, bg: "#0b4ea2", to: "users" },
   ];
 
-  const bidRows = (a: Bid[]) => a.map((b) => [findUser(s, b.userId)?.name, findGame(s, b.gameId)?.name, bidTypeLabel(b), b.value, inr(b.amount), b.win ? inr(b.win) : "—", <BidBadge key="s" s={b.status} />]);
-  const txRows = (a: Txn[]) => a.map((x) => { const u = findUser(s, x.userId)!; return [u.name, u.mobile, inr(x.amount), x.mode ?? "—", x.status, fmtTime(x.time)]; });
+  const bidRows = (a: Bid[]) => a.map((b) => [findUser(s, b.userId)?.name ?? "Deleted User", findGame(s, b.gameId)?.name, bidTypeLabel(b), b.value, inr(b.amount), b.win ? inr(b.win) : "—", <BidBadge key="s" s={b.status} />]);
+  const txRows = (a: Txn[]) => a.map((x) => { const u = findUser(s, x.userId); return [u?.name ?? "Deleted User", u?.mobile ?? "—", inr(x.amount), x.mode ?? "—", x.status, fmtTime(x.time)]; });
   const views = {
     bids: ["Total Bid Amount", <Table key="t" head={["User", "Game", "Type", "Number", "Amount", "Win", "Status"]} rows={bidRows(R.bids)} />],
     wins: ["Total Winning Amount", <Table key="t" head={["User", "Game", "Type", "Number", "Amount", "Win", "Status"]} rows={bidRows(R.wins)} />],
@@ -177,8 +177,8 @@ export function Dashboard({ go }: { go: (r: string) => void }) {
 
         <h3 className="text-xl font-semibold mt-8 mb-3">Auto Fund Deposit</h3>
         <DataTable head={["#", "User Name", "Mobile", "Amount", "UPI App", "Date"]}
-          rows={deps.map((x, i) => { const u = findUser(s, x.userId)!; return [i + 1, u.name, u.mobile, inr(x.amount), x.mode, `${fmtDate(x.date)} ${fmtTime(x.time)}`]; })}
-          text={deps.map((x) => { const u = findUser(s, x.userId)!; return `${u.name} ${u.mobile}`; })} />
+          rows={deps.map((x, i) => { const u = findUser(s, x.userId); return [i + 1, u?.name ?? "Deleted User", u?.mobile ?? "—", inr(x.amount), x.mode, `${fmtDate(x.date)} ${fmtTime(x.time)}`]; })}
+          text={deps.map((x) => { const u = findUser(s, x.userId); return `${u?.name ?? "Deleted User"} ${u?.mobile ?? ""}`; })} />
       </Card>
 
       {view && <Modal wide title={`${views[view][0]} — ${fmtDate(rep.date)}`} onClose={() => setView(null)}>{views[view][1]}</Modal>}

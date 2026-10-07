@@ -39,8 +39,8 @@ export function BidRevert({ cat }: { cat: Cat }) {
             <Btn variant="red" disabled={!list.length} onClick={run}>Revert All Bids</Btn>
           </div>
           <DataTable head={["#", "User Name", "Mobile", "Game Type", "Session", "Number", "Amount", "Time"]}
-            rows={list.map((b, i) => { const u = findUser(s, b.userId)!; return [i + 1, u.name, u.mobile, bidTypeLabel(b), sessionLabel(b), b.value, inr(b.amount), fmtTime(b.time)]; })}
-            text={list.map((b) => findUser(s, b.userId)!.name)} />
+            rows={list.map((b, i) => { const u = findUser(s, b.userId); return [i + 1, u?.name ?? "Deleted User", u?.mobile ?? "—", bidTypeLabel(b), sessionLabel(b), b.value, inr(b.amount), fmtTime(b.time)]; })}
+            text={list.map((b) => findUser(s, b.userId)?.name ?? "Deleted User")} />
         </>
       )}
     </Card>

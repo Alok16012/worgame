@@ -128,7 +128,7 @@ export function DeclareResult({ cat }: { cat: Cat }) {
               <div className="mt-5">
                 <div className="text-sm text-slate-600 mb-2">{winners.length} winning bids · payout <b>{inr(winners.reduce((a, b) => a + b.win, 0))}</b></div>
                 <Table head={["#", "Date", "User", "Mobile", "Amount", "Winning Amount", "Game Type", "Choose Number", "Session"]}
-                  rows={winners.map((b, i) => { const u = findUser(s, b.userId)!; return [i + 1, fmtDate(b.date), u.name, u.mobile, inr(b.amount), inr(b.win), bidTypeLabel(b), b.value, sessionLabel(b)]; })}
+                  rows={winners.map((b, i) => { const u = findUser(s, b.userId); return [i + 1, fmtDate(b.date), u?.name ?? "Deleted User", u?.mobile ?? "—", inr(b.amount), inr(b.win), bidTypeLabel(b), b.value, sessionLabel(b)]; })}
                   empty="No winner for this result" />
               </div>
             )}

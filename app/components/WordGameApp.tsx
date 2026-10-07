@@ -73,7 +73,10 @@ function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
             ))}
             <button onClick={() => { onClose(); nav.logout(); }} className="w-full flex items-center gap-4 px-5 py-3 text-[15px] text-rose-600 active:bg-rose-50 transition"><LogOut size={19} /> Logout</button>
           </div>
-          <div className="text-center text-xs text-slate-400 pb-6">Version {state.settings.version}</div>
+          <div className="text-center text-xs text-slate-400 pb-6 flex flex-col items-center gap-1.5">
+            <div>Version {state.settings.version}</div>
+            <a href="/admin" target="_blank" className="text-blue-600 hover:underline font-medium">Admin Portal →</a>
+          </div>
         </aside>
       </div>
     </div>

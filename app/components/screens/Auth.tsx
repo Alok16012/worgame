@@ -480,6 +480,16 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
       >
         <MessageCircle size={20} className="text-emerald-500" /> CONTACT ADMIN
       </a>
+
+      {/* Admin Portal Direct Link */}
+      <div className="text-center mt-6">
+        <a
+          href="/admin"
+          className="text-xs text-white/50 hover:text-white transition underline"
+        >
+          Admin Portal Login →
+        </a>
+      </div>
     </div>
   );
 }

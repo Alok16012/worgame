@@ -55,6 +55,15 @@ function normalize(s: State): State {
     if (s.settings.quizTitle === undefined) s.settings.quizTitle = "Market Educational Quiz";
     if (s.settings.quizTimeLimit === undefined) s.settings.quizTimeLimit = 90;
   }
+  if (s.users && Array.isArray(s.users)) {
+    const validUserIds = new Set(s.users.map((u) => u.id));
+    if (s.txns && Array.isArray(s.txns)) {
+      s.txns = s.txns.filter((x) => validUserIds.has(x.userId));
+    }
+    if (s.bids && Array.isArray(s.bids)) {
+      s.bids = s.bids.filter((b) => validUserIds.has(b.userId));
+    }
+  }
   return s;
 }
 
@@ -66,7 +75,7 @@ function load(): State {
       if (s?.v === STATE_VERSION && Array.isArray(s.users)) return normalize(s);
     }
   } catch {}
-  const s = seedState();
+  const s = normalize(seedState());
   save(s);
   return s;
 }
