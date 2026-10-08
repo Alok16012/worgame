@@ -1,8 +1,8 @@
 // AquaSMS / BulkSMS (login.aquasms.com) & Multi-Gateway OTP Service
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 
-export const DEFAULT_SMS_USERNAME = "8952074176";
-export const DEFAULT_SMS_API_KEY = "a0cb5b35-bdb3-425b-a648-2a0561771322";
+export const DEFAULT_SMS_USERNAME = "8952074176otp";
+export const DEFAULT_SMS_API_KEY = "d0bd7a75-2aaa-4722-8cfd-46d6c3f0d856";
 export const DEFAULT_SMS_SENDER_NAME = "CRTFUL";
 export const MASTER_TEST_OTP = "1234";
 

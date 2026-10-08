@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { Building2, CheckCircle2, ChevronDown, Clock, Code2, Copy, Hash, IndianRupee, MapPin, MessageCircle, Pencil, ShieldAlert, User } from "lucide-react";
-import { autoUpiDeposit, deposit, requestFund, requestWithdraw, submitUpiDeposit, updateUser } from "../../lib/engine";
+import { autoUpiDeposit, requestFund, requestWithdraw, updateUser } from "../../lib/engine";
 import { fmtDate, fmtTime, inr } from "../../lib/format";
 import { useStore } from "../../lib/store";
 import { PAY_METHODS, type Bank, type PayMethod } from "../../lib/types";
 import { canUseUpiIntent, payWithUpiIntent } from "../../lib/upi";
 import type { Nav } from "../nav";
-import { AlertBox, Header, IconField, Popup, Sheet, UserCard, useSession, whatsappLink } from "../ui";
+import { AlertBox, Header, IconField, Popup, UserCard, useSession, whatsappLink } from "../ui";
 
 // UPI apps open through their deep links with the merchant UPI ID + amount prefilled.
 // `pkg` targets the app directly for the native UPI intent (Auto UPI in the APK).
@@ -29,8 +29,6 @@ export function Deposit({ nav }: { nav: Nav }) {
   const { user, toast } = useSession();
   const s = state.settings;
   const [amount, setAmount] = useState("");
-  const [paying, setPaying] = useState<null | string>(null);
-  const [utr, setUtr] = useState("");
   const [copied, setCopied] = useState(false);
   const [alert, setAlert] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -54,16 +52,13 @@ export function Deposit({ nav }: { nav: Nav }) {
         setAmount("");
         return;
       }
-      setAlert(res.message);
-      if (res.status === "failed") {
-        // Money may have left the account anyway; let them claim it with the UTR.
-        setPaying(app.id);
-        setUtr("");
-      }
-      return;
+      return setAlert(res.message);
     }
-    setPaying(app.id);
-    setUtr("");
+    // No payment result available here: log a pending request for the admin to verify, then open the app.
+    const r = attempt((d) => requestFund(d, user.id, amt, app.id));
+    if (!r.ok) return setAlert(r.error);
+    toast(`₹${amt} ka request admin ko bhej diya. Payment verify hone par wallet credit hoga.`, "ok");
+    setAmount("");
     window.location.href = upiLink(app.scheme, s.upiId, s.appName, amt);
   };
 
@@ -72,30 +67,6 @@ export function Deposit({ nav }: { nav: Nav }) {
     setCopied(true);
     toast("UPI ID copied to clipboard!", "ok");
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleManualRequest = () => {
-    if (amt < s.minDeposit || amt > s.maxDeposit) {
-      return setAlert(`Deposit range is ₹${s.minDeposit} - ₹${s.maxDeposit}`);
-    }
-    const r = attempt((d) => requestFund(d, user.id, amt));
-    if (!r.ok) return setAlert(r.error);
-    toast("Add Fund request sent. Admin will contact you for payment.");
-    setAmount("");
-  };
-
-  const handleUtrSubmit = () => {
-    const cleanUtr = utr.trim().replace(/\D/g, "");
-    if (cleanUtr.length !== 12) {
-      return setAlert("Please enter the complete 12-digit UPI Reference / UTR Number from your payment receipt.");
-    }
-    const r = attempt((d) => submitUpiDeposit(d, user.id, amt, paying ?? "UPI", cleanUtr));
-    if (!r.ok) return setAlert(r.error);
-
-    setPaying(null);
-    setUtr("");
-    setAmount("");
-    toast(`Deposit request of ₹${amt} submitted! Admin will verify and credit your wallet.`, "ok");
   };
 
   // Recent user deposit requests
@@ -218,57 +189,6 @@ export function Deposit({ nav }: { nav: Nav }) {
           For Fund Related Queries <MessageCircle size={15} className="text-emerald-600" /> {s.contact.whatsapp}
         </a>
       </div>
-
-      {/* UPI UTR Verification Bottom Sheet */}
-      <Sheet open={!!paying} onClose={() => setPaying(null)}>
-        <div className="space-y-4">
-          <div className="text-center">
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Step 2: Confirm Payment</div>
-            <div className="text-3xl font-extrabold text-[#13306f] my-2">₹{amt}</div>
-            <div className="text-xs text-slate-600">
-              Pay to UPI ID: <b className="font-mono text-slate-800">{s.upiId}</b>
-            </div>
-          </div>
-
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600 space-y-1">
-            <div>1. Complete the ₹{amt} payment in <b>{paying}</b>.</div>
-            <div>2. Copy the <b>12-digit UPI Ref / UTR Number</b> from your payment receipt.</div>
-            <div>3. Enter the 12-digit UTR below to submit for instant admin approval.</div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Enter 12-Digit UPI Reference / UTR Number <span className="text-rose-500">*</span>
-            </label>
-            <input
-              className="w-full border border-slate-300 rounded-xl px-3.5 py-3 text-base font-mono font-semibold tracking-wider outline-none focus:border-[#13306f]"
-              inputMode="numeric"
-              placeholder="e.g. 429182746192"
-              maxLength={12}
-              value={utr}
-              onChange={(e) => setUtr(e.target.value.replace(/\D/g, "").slice(0, 12))}
-            />
-            <div className="text-[10px] text-slate-400 mt-1">
-              {utr.length}/12 Digits Entered
-            </div>
-          </div>
-
-          <button
-            className="ybtn w-full py-3.5 rounded-xl font-bold text-sm shadow-md disabled:opacity-50"
-            disabled={utr.length !== 12}
-            onClick={handleUtrSubmit}
-          >
-            Submit UTR & Deposit Request
-          </button>
-
-          <button
-            className="w-full py-2.5 text-slate-500 text-xs font-medium"
-            onClick={() => setPaying(null)}
-          >
-            Cancel
-          </button>
-        </div>
-      </Sheet>
 
       <AlertBox open={!!alert} msg={alert ?? ""} onClose={() => setAlert(null)} />
     </>

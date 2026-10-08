@@ -93,23 +93,23 @@ export function MainSetting() {
               <Field label="AquaSMS Username">
                 <input
                   className="admin-input font-mono"
-                  placeholder="e.g. 8952074176"
-                  value={f.smsUsername ?? "8952074176"}
+                  placeholder="e.g. 8952074176otp"
+                  value={f.smsUsername ?? "8952074176otp"}
                   onChange={(e) => setF({ ...f, smsUsername: e.target.value.trim() })}
                 />
               </Field>
               <Field label="AquaSMS API Key" className="md:col-span-2">
                 <input
                   className="admin-input font-mono"
-                  placeholder="e.g. a0cb5b35-bdb3-425b-a648-2a0561771322"
-                  value={f.otpApiKey ?? "a0cb5b35-bdb3-425b-a648-2a0561771322"}
+                  placeholder="e.g. d0bd7a75-2aaa-4722-8cfd-46d6c3f0d856"
+                  value={f.otpApiKey ?? "d0bd7a75-2aaa-4722-8cfd-46d6c3f0d856"}
                   onChange={(e) => setF({ ...f, otpApiKey: e.target.value.trim() })}
                 />
               </Field>
               <Field label="Sender Name (6 Letters)">
                 <input
                   className="admin-input uppercase font-mono"
-                  placeholder="e.g. SKLYAN (from Sender Name menu)"
+                  placeholder="e.g. CRTFUL (from Sender Name menu)"
                   maxLength={6}
                   value={f.smsSenderName || ""}
                   onChange={(e) => setF({ ...f, smsSenderName: e.target.value.trim().toUpperCase() })}

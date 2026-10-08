@@ -369,11 +369,11 @@ export function decideAutoDeposit(s: State, txnId: number, status: "approved" | 
 }
 
 /** Manual mode (setting OFF): the player raises an Add Fund request; nothing is credited until the admin approves. */
-export function requestFund(s: State, userId: number, amount: number) {
+export function requestFund(s: State, userId: number, amount: number, mode = "Manual") {
   const u = findUser(s, userId) ?? fail("User not found");
   checkDeposit(s, amount);
   if (s.txns.some((x) => x.userId === userId && x.type === "deposit" && x.status === "pending")) fail("You already have a pending Add Fund request");
-  addTxn(s, userId, "deposit", "cr", amount, "Add fund request", { mode: "Manual", status: "pending" });
+  addTxn(s, userId, "deposit", "cr", amount, "Add fund request", { mode, status: "pending" });
   log(s, "Add Fund Request", `${u.name} requested ${inr(amount)}`);
 }
 

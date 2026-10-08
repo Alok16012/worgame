@@ -49,6 +49,6 @@ export async function payWithUpiIntent(opts: { vpa: string; payeeName: string; a
     if (r.txnref && r.txnref !== opts.txnRef) return { status: "failed", message: "Payment reference match nahi hua." };
     return { status: "success", txnId, txnRef: opts.txnRef };
   }
-  if (status === "SUBMITTED") return { status: "failed", message: "Payment pending hai. Complete hone ke baad UTR ke saath request bhejein." };
-  return { status: "failed", message: "Payment fail ho gaya. Paise kate hon to UTR ke saath request bhejein." };
+  if (status === "SUBMITTED") return { status: "failed", message: "Payment pending hai. Paise kate hon to WhatsApp par support se contact karein." };
+  return { status: "failed", message: "Payment fail ho gaya. Paise kate hon to WhatsApp par support se contact karein." };
 }
