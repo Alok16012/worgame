@@ -96,6 +96,8 @@ function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
           </div>
           <div className="text-center text-xs text-slate-400 pb-6 flex flex-col items-center gap-1.5">
             <div>Version {state.settings.version}</div>
+            <a href="/privacy-policy" className="text-blue-600 underline">Privacy Policy</a>
+            <a href="/delete-account" className="text-blue-600 underline">Delete Account &amp; Data</a>
             <a href="/admin" target="_blank" className="text-blue-600 hover:underline font-medium">Admin Portal →</a>
           </div>
         </aside>

@@ -484,6 +484,10 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
       </a>
 
       {/* Admin Portal Direct Link */}
+      <div className="mt-6 flex justify-center gap-5 text-xs text-white/80">
+        <a href="/privacy-policy" className="underline">Privacy Policy</a>
+        <a href="/delete-account" className="underline">Delete Account</a>
+      </div>
       <div className="text-center mt-6">
         <a
           href="/admin"
