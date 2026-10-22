@@ -1,4 +1,4 @@
-package com.shrikalyan.app;
+package com.triviaverse.app;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;

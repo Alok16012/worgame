@@ -20,8 +20,8 @@
   Ek hi bundle hai. Phone par naam/icon/splash hamesha Triviaverse.
   App ke andar admin ke Quiz Mode ON/OFF se content aur name/logo
   (Triviaverse <-> Shri Kalyan) khud badalta hai.
-- Package Name (App ID): com.shrikalyan.app
-- Version: 1.1 (Version Code: 2)
+- Package Name (App ID): com.triviaverse.app
+- Version: 1.0 (Version Code: 1) — naya Play Store app (naya package), isliye version reset
 - Keystore File: android/app/shrikalyan.keystore
 - Keystore Alias: shrikalyan
 - Keystore Password: shrikalyan@123
