@@ -41,7 +41,7 @@ export function Logo({ size = 44, boxed = false, quiz = false }: { size?: number
     const px = Math.max(72, Math.round(size * 3.2));
     return (
       <img
-        src="/icon.png"
+        src="/shrikalyan-logo.png"
         alt="Shri Kalyan"
         width={px}
         height={px}

@@ -217,7 +217,7 @@ function Shell() {
   const brandQuiz = isQuizMode(state, user);
   const brandTitle = brandName(state, user);
   useEffect(() => {
-    const href = brandQuiz ? QUIZ_LOGO : "/icon.png";
+    const href = brandQuiz ? QUIZ_LOGO : "/shrikalyan-logo.png";
     const apply = () => {
       if (document.title !== brandTitle) document.title = brandTitle;
       document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((l) => {

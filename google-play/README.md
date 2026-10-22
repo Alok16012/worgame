@@ -2,7 +2,7 @@
 
 - `logo-512.png`: 512 × 512 RGBA PNG, Triviaverse quiz-mode branding (from `public/quiz-logo.png`).
 - `banner-1024x500.png`: 1024 × 500 RGB PNG, quiz theme.
-- `screenshots/`: four 1080 × 1920 RGB screenshots of the actual quiz mode: home, questions, result, guidelines. Captured in an isolated browser with a fictional local quiz account; all external/cloud traffic blocked. No production account was created or changed.
+- `screenshots/`: four 1080 × 1920 RGB screenshots of the actual quiz mode (Triviaverse branding): home, questions, result, guidelines. Captured in an isolated browser with a fictional local quiz account; all external/cloud traffic blocked. No production account was created or changed.
 - `banner-source.svg`: editable banner source.
 
 ## Policy links
@@ -14,7 +14,7 @@ Pages are implemented at `/privacy-policy` and `/delete-account`. Local preview:
 
 There is no public website/domain or deployment configuration identifying a live site in this folder. Deploy the built `out/` directory to the app's existing web host, then use its HTTPS domain followed by these paths in Play Console. Localhost links cannot be submitted as public policy URLs.
 
-The support email `support@shrikalyan.app` comes from the project's settings. Its inbox/deliverability has not been verified. The deletion page opens an email request; it does not silently claim to delete data or implement an automatic deletion service.
+The support email `support@shrikalyan.app` comes from the project's settings (not yet changed to a Triviaverse address). Its inbox/deliverability has not been verified. The deletion page opens an email request; it does not silently claim to delete data or implement an automatic deletion service.
 
 ## Before submission
 

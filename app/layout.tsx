@@ -13,8 +13,8 @@ const cinzel = Cinzel({ subsets: ["latin"], weight: "700", display: "swap", vari
 const yatra = Yatra_One({ subsets: ["latin"], weight: "400", display: "swap", variable: "--font-yatra" });
 
 export const metadata: Metadata = {
-  title: "Shri Kalyan — Matka • Starline • Gali Desawar",
-  description: "Matka markets, Starline and Gali Desawar — play, win and withdraw instantly.",
+  title: "Triviaverse — Daily Quizzes & Knowledge Challenges",
+  description: "Triviaverse: free daily multiple-choice quizzes, timed challenges and knowledge building.",
   icons: {
     icon: [
       { url: "/icon.png", sizes: "512x512", type: "image/png" },

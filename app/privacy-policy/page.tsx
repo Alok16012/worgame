@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { LegalPage, supportEmail } from "../components/LegalPage";
 
-export const metadata: Metadata = { title: "Privacy Policy | Shri Kalyan" };
+export const metadata: Metadata = { title: "Privacy Policy | Triviaverse" };
 
 export default function PrivacyPolicy() {
   return <LegalPage title="Privacy policy">
-    <p>This policy describes the information used by the Shri Kalyan Android app and website, including its educational quiz mode. Contact the Shri Kalyan support team at <a href={`mailto:${supportEmail}`}>{supportEmail}</a> with privacy questions.</p>
+    <p>This policy describes the information used by the Triviaverse Android app and website, including its educational quiz mode. Contact the Triviaverse support team at <a href={`mailto:${supportEmail}`}>{supportEmail}</a> with privacy questions.</p>
     <section><h2>Information the app handles</h2><ul className="list-disc pl-5">
       <li>Account information: name, mobile number, password, optional email, account status and login activity.</li>
       <li>Quiz answers and scores are calculated in the current quiz session. Suggestions you submit include your account name, mobile number, category, message and submission time.</li>

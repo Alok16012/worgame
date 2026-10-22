@@ -19,7 +19,7 @@ const designs = [
       <circle cx="1100" cy="320" r="410" fill="none" stroke="white" stroke-opacity=".045" stroke-width="110"/>
       <circle cx="-80" cy="1620" r="400" fill="none" stroke="white" stroke-opacity=".035" stroke-width="75"/>
       <rect x="76" y="87" width="38" height="6" rx="3" fill="${d.accent}"/>
-      <text x="132" y="102" font-family="Arial,sans-serif" font-weight="700" font-size="29" letter-spacing="4" fill="white">SHRI KALYAN</text>
+      <text x="132" y="102" font-family="Arial,sans-serif" font-weight="700" font-size="29" letter-spacing="4" fill="white">TRIVIAVERSE</text>
       <text x="76" y="194" font-family="Arial,sans-serif" font-weight="700" font-size="23" letter-spacing="3" fill="${d.accent}">${d.tag}</text>
       <text x="70" y="292" font-family="Arial,sans-serif" font-weight="700" font-size="76" fill="white">${d.lines[0]}</text>
       <text x="70" y="382" font-family="Arial,sans-serif" font-weight="700" font-size="76" fill="${d.accent}">${d.lines[1]}</text>

@@ -1,7 +1,7 @@
 {
-  "name": "Shri Kalyan",
-  "short_name": "Shri Kalyan",
-  "description": "Shri Kalyan — Matka, Starline, Gali Desawar",
+  "name": "Triviaverse",
+  "short_name": "Triviaverse",
+  "description": "Triviaverse — daily quizzes and knowledge challenges",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b1d4f",
