@@ -29,7 +29,7 @@ export function Header({ title, onBack, onMenu, brand }: { title: string; onBack
         <div className="flex items-center gap-3 px-4 h-14">
           {onBack && <button onClick={onBack} className="-ml-1 w-9 h-9 rounded-lg grid place-items-center active:bg-white/10 transition-colors" aria-label="Back"><ChevronLeft size={26} /></button>}
           {onMenu && <button onClick={onMenu} className="-ml-1 w-9 h-9 rounded-lg grid place-items-center active:bg-white/10 transition-colors" aria-label="Menu"><Menu size={26} /></button>}
-          <div className="flex-1 min-w-0 truncate">{brand ? <Wordmark name={title} size={20} /> : <span className="text-[17px] font-semibold uppercase tracking-wide">{title}</span>}</div>
+          <div className="flex-1 min-w-0 truncate">{brand ? <Wordmark name={title} size={20} quiz={quizMode} /> : <span className="text-[17px] font-semibold uppercase tracking-wide">{title}</span>}</div>
           {quizMode ? (
             <div className="flex items-center gap-1.5 font-semibold text-xs bg-white/10 px-2.5 py-1 rounded-full text-[#f5c542]">
               🎓 Quiz Mode

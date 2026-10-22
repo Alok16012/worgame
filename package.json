@@ -7,8 +7,12 @@
     "build": "next build",
     "start": "next start",
     "cap:sync": "next build && npx cap sync android",
-    "build:apk": "npm run cap:sync && cd android && ./gradlew assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../release-builds/ShriKalyan.apk",
-    "build:aab": "npm run cap:sync && cd android && ./gradlew bundleRelease && cp app/build/outputs/bundle/release/app-release.aab ../release-builds/ShriKalyan.aab"
+    "brand:shrikalyan": "node scripts/android-brand.cjs shrikalyan",
+    "brand:triviaverse": "node scripts/android-brand.cjs triviaverse",
+    "build:apk": "npm run brand:shrikalyan && npm run cap:sync && cd android && ./gradlew assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../release-builds/ShriKalyan.apk",
+    "build:aab": "npm run brand:shrikalyan && npm run cap:sync && cd android && ./gradlew bundleRelease && cp app/build/outputs/bundle/release/app-release.aab ../release-builds/ShriKalyan.aab",
+    "build:apk:quiz": "npm run brand:triviaverse && npm run cap:sync && cd android && ./gradlew assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../release-builds/Triviaverse.apk",
+    "build:aab:quiz": "npm run brand:triviaverse && npm run cap:sync && cd android && ./gradlew bundleRelease && cp app/build/outputs/bundle/release/app-release.aab ../release-builds/Triviaverse.aab"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

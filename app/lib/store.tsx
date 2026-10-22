@@ -54,12 +54,23 @@ function normalize(s: State): State {
     if (s.settings.autoUpi === undefined) s.settings.autoUpi = false;
     if (s.settings.bettingDisabled === undefined) s.settings.bettingDisabled = false;
     if (s.settings.quizTitle === undefined) s.settings.quizTitle = "Market Educational Quiz";
+    if (!s.settings.quizAppName) s.settings.quizAppName = "Triviaverse";
     if (s.settings.quizTimeLimit === undefined) s.settings.quizTimeLimit = 90;
     if (s.settings.otpEnabled === undefined) s.settings.otpEnabled = true;
-    if (!s.settings.otpApiKey || s.settings.otpApiKey === "a0cb5b35-bdb3-425b-a648-2a0561771322") s.settings.otpApiKey = "d0bd7a75-2aaa-4722-8cfd-46d6c3f0d856";
+    if (
+      !s.settings.otpApiKey ||
+      s.settings.otpApiKey === "a0cb5b35-bdb3-425b-a648-2a0561771322" ||
+      s.settings.otpApiKey === "d0bd7a75-2aaa-4722-8cfd-46d6c3f0d856"
+    ) s.settings.otpApiKey = "288171aa-5b01-4c7d-9d0a-4ac370a069d5";
     if (!s.settings.smsUsername || s.settings.smsUsername === "8952074176") s.settings.smsUsername = "8952074176otp";
     if (!s.settings.smsSenderName || s.settings.smsSenderName === "SKLYAN") s.settings.smsSenderName = "CRTFUL";
-    if (!s.settings.smsMessageTemplate || s.settings.smsMessageTemplate === "Your verification OTP is {OTP}. Please do not share it with anyone.") s.settings.smsMessageTemplate = "Your OTP code for verification is : {OTP} CRTFUL";
+    if (!s.settings.smsPeid) s.settings.smsPeid = "1201159222339095819";
+    if (!s.settings.smsTemplateId) s.settings.smsTemplateId = "1207168862846693121";
+    if (
+      !s.settings.smsMessageTemplate ||
+      s.settings.smsMessageTemplate === "Your verification OTP is {OTP}. Please do not share it with anyone." ||
+      s.settings.smsMessageTemplate === "Your OTP code for verification is : {OTP} CRTFUL"
+    ) s.settings.smsMessageTemplate = "Your OTP code for verification is : {OTP} for aquasms  CRTFUL";
   }
   if (s.users && Array.isArray(s.users)) {
     const validUserIds = new Set(s.users.map((u) => u.id));

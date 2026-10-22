@@ -159,6 +159,8 @@ export interface Settings {
   /** ON: Normal Matka Betting App | OFF: Educational Quiz Safe Mode (Google Play Store compliant) */
   bettingDisabled: boolean;
   quizTitle?: string;
+  /** App name shown in Quiz mode (default "Triviaverse"). */
+  quizAppName?: string;
   quizTimeLimit?: number; // In seconds (default 90)
   demoMode: boolean; // ignore the withdraw time window (market timings always apply)
   maintenance: boolean;

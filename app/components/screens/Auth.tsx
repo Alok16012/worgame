@@ -4,12 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, KeyRound, Lock, MessageCircle, Pencil, RotateCcw, ShieldCheck, Smartphone, User } from "lucide-react";
 import { loginUser, registerUser, resetUserPassword } from "../../lib/engine";
 import { send4DigitOtp, verify4DigitOtp } from "../../lib/otp";
+import { brandName, isQuizMode } from "../../lib/brand";
 import { useStore } from "../../lib/store";
 import { Logo } from "../Logo";
 import { IconField, whatsappLink } from "../ui";
 
 export function Splash({ onDone }: { onDone: () => void }) {
-  const { reloadFromCloud } = useStore();
+  const { state, reloadFromCloud } = useStore();
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
@@ -23,7 +24,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="min-h-dvh grid place-items-center page-blue">
-      <div className="pop"><Logo size={52} boxed /></div>
+      <div className="pop"><Logo size={52} boxed quiz={isQuizMode(state)} /></div>
     </div>
   );
 }
@@ -184,7 +185,7 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
       const r = attempt((d) => registerUser(d, name, cleanMobile, password));
       setIsVerifying(false);
       if (!r.ok) return toast(r.error, "bad");
-      toast("Registration successful! Welcome to Shri Kalyan.", "ok");
+      toast(`Registration successful! Welcome to ${brandName(state)}.`, "ok");
       onSignedIn(r.value);
     } else {
       const r = attempt((d) => resetUserPassword(d, cleanMobile, newPassword));
@@ -249,7 +250,7 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
         ) : (
           <div className="w-10" />
         )}
-        <Logo size={40} boxed />
+        <Logo size={40} boxed quiz={isQuizMode(state)} />
         <div className="w-10" />
       </div>
 
@@ -474,14 +475,16 @@ export function Auth({ onSignedIn, toast }: { onSignedIn: (uid: number) => void;
       )}
 
       {/* Admin WhatsApp Button */}
-      <a
-        href={whatsappLink(state.settings.contact.whatsapp)}
-        target="_blank"
-        rel="noreferrer"
-        className="mx-auto mt-7 flex items-center gap-2 bg-white rounded-full px-7 py-3 shadow-md font-bold text-[#13306f] hover:bg-slate-50 transition-colors"
-      >
-        <MessageCircle size={20} className="text-emerald-500" /> CONTACT ADMIN
-      </a>
+      {!state.settings.bettingDisabled && (
+        <a
+          href={whatsappLink(state.settings.contact.whatsapp)}
+          target="_blank"
+          rel="noreferrer"
+          className="mx-auto mt-7 flex items-center gap-2 bg-white rounded-full px-7 py-3 shadow-md font-bold text-[#13306f] hover:bg-slate-50 transition-colors"
+        >
+          <MessageCircle size={20} className="text-emerald-500" /> CONTACT ADMIN
+        </a>
+      )}
 
       {/* Admin Portal Direct Link */}
       <div className="mt-6 flex justify-center gap-5 text-xs text-white/80">

@@ -3,14 +3,14 @@ const fs = require('node:fs/promises');
 
 (async () => {
   await fs.mkdir('google-play', { recursive: true });
-  await sharp('public/icon-512.png').resize(512, 512).ensureAlpha().png().toFile('google-play/logo-512.png');
+  await sharp('public/quiz-logo.png').resize(512, 512).flatten({ background: '#0b053b' }).ensureAlpha().png().toFile('google-play/logo-512.png');
   const banner = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
     <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#092254"/><stop offset="1" stop-color="#224caa"/></linearGradient><linearGradient id="gold" x2="1" y2="1"><stop stop-color="#ffe6a3"/><stop offset="1" stop-color="#f3b72e"/></linearGradient></defs>
     <rect width="1024" height="500" fill="url(#bg)"/>
     <circle cx="950" cy="40" r="260" fill="none" stroke="#ffffff" stroke-opacity=".07" stroke-width="60"/>
     <circle cx="70" cy="520" r="220" fill="none" stroke="#ffffff" stroke-opacity=".04" stroke-width="50"/>
     <path d="M76 116h48" stroke="#f5c542" stroke-width="5" stroke-linecap="round"/>
-    <text x="76" y="172" font-family="Arial,sans-serif" font-size="28" font-weight="700" letter-spacing="4" fill="#f8d77c">SHRI KALYAN</text>
+    <text x="76" y="172" font-family="Arial,sans-serif" font-size="28" font-weight="700" letter-spacing="4" fill="#f8d77c">TRIVIAVERSE</text>
     <text x="72" y="253" font-family="Arial,sans-serif" font-size="62" font-weight="700" fill="white">A daily spark</text>
     <text x="72" y="326" font-family="Arial,sans-serif" font-size="62" font-weight="700" fill="url(#gold)">for your mind.</text>
     <text x="76" y="381" font-family="Arial,sans-serif" font-size="23" fill="#cfddff">Quizzes · Questions · Ideas</text>

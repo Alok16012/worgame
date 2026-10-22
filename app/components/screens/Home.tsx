@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowDownToLine, BarChart3, Play, PlusCircle, Send, Star } from "lucide-react";
+import { brandName } from "../../lib/brand";
 import { displayResult, findGame, isOffDay, marketState, resultOf } from "../../lib/engine";
 import { addDays, fmtDate, fmtTime, ymd } from "../../lib/format";
 import { resultText } from "../../lib/matka";
@@ -84,7 +85,7 @@ export function Home({ nav, openMenu }: { nav: Nav; openMenu: () => void }) {
 
   return (
     <>
-      <Header title={s.appName} onMenu={openMenu} brand />
+      <Header title={brandName(state, user)} onMenu={openMenu} brand />
       <div className="marquee overflow-hidden whitespace-nowrap text-[#f5c542] font-semibold text-sm py-1.5 bg-black/20">
         <span>{quizMode ? "WELCOME TO EDUCATIONAL QUIZ HUB • Test your market analysis with daily multiple choice quizzes & submit ideas!" : s.marquee}</span>
       </div>
@@ -109,8 +110,6 @@ export function Home({ nav, openMenu }: { nav: Nav; openMenu: () => void }) {
               <Pill icon={<PlusCircle size={15} />} label="Submit Idea" onClick={() => nav.push({ name: "submitIdea" })} />
               <Pill icon={<Star size={15} />} label="Starline Quiz" onClick={() => nav.push({ name: "list", cat: "starline" })} />
               <Pill icon={<BarChart3 size={15} />} label="Quiz Rules" onClick={() => nav.push({ name: "quizRules" })} />
-              <Pill icon={<span className="text-[13px] font-bold">W</span>} label="WhatsApp" href={whatsappLink(s.contact.whatsapp)} />
-              <Pill icon={<Send size={14} />} label="Telegram" href={`https://t.me/${s.contact.telegram.replace("@", "")}`} />
             </>
           ) : (
             <>

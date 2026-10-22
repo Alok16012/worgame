@@ -1,6 +1,6 @@
-# Shri Kalyan — Google Play listing assets
+# Triviaverse — Google Play listing assets
 
-- `logo-512.png`: 512 × 512 RGBA PNG, existing app branding.
+- `logo-512.png`: 512 × 512 RGBA PNG, Triviaverse quiz-mode branding (from `public/quiz-logo.png`).
 - `banner-1024x500.png`: 1024 × 500 RGB PNG, quiz theme.
 - `screenshots/`: four 1080 × 1920 RGB screenshots of the actual quiz mode: home, questions, result, guidelines. Captured in an isolated browser with a fictional local quiz account; all external/cloud traffic blocked. No production account was created or changed.
 - `banner-source.svg`: editable banner source.
@@ -31,4 +31,4 @@ Official references:
 
 ## Regenerate
 
-Run `node scripts/create-play-graphics.cjs` for logo/banner. Start `npm run dev`, install/provide Playwright, then run `node scripts/capture-play-listing.cjs`. If Playwright is installed outside this project, set `PLAYWRIGHT_MODULE` to its module path.
+Run `node scripts/create-play-graphics.cjs` for logo/banner and `node scripts/create-android-branding.cjs` to regenerate the Triviaverse Android asset set in `android-branding/triviaverse/`. Switch the Android project between brands with `npm run brand:shrikalyan` / `npm run brand:triviaverse` (the quiz build scripts `build:apk:quiz` / `build:aab:quiz` do this automatically). Start `npm run dev`, install/provide Playwright, then run `node scripts/capture-play-listing.cjs`. If Playwright is installed outside this project, set `PLAYWRIGHT_MODULE` to its module path.

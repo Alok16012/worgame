@@ -174,12 +174,14 @@ export function Profile({ nav }: { nav: Nav }) {
 
 export function Contact({ nav }: { nav: Nav }) {
   const { state } = useStore();
+  const { user } = useSession();
+  const quizMode = user ? !user.betting : state.settings.bettingDisabled;
   const c = state.settings.contact;
   const rows: [React.ReactNode, string, string, string][] = [
-    [<MessageCircle key="i" className="text-emerald-500" />, "WhatsApp", c.whatsapp, whatsappLink(c.whatsapp)],
+    ...(!quizMode ? [[<MessageCircle key="i" className="text-emerald-500" />, "WhatsApp", c.whatsapp, whatsappLink(c.whatsapp)] as [React.ReactNode, string, string, string]] : []),
     [<Phone key="i" className="text-sky-600" />, "Call", c.phone, `tel:${c.phone.replace(/\s/g, "")}`],
     [<Mail key="i" className="text-amber-500" />, "Email", c.email, `mailto:${c.email}`],
-    [<Send key="i" className="text-sky-500" />, "Telegram", c.telegram, `https://t.me/${c.telegram.replace("@", "")}`],
+    ...(!quizMode ? [[<Send key="i" className="text-sky-500" />, "Telegram", c.telegram, `https://t.me/${c.telegram.replace("@", "")}`] as [React.ReactNode, string, string, string]] : []),
   ];
   return (
     <>

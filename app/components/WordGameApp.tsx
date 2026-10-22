@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Award, Banknote, Bell, BookOpen, Gamepad2, History, Home as HomeIcon, Landmark, Lightbulb, LogOut, Percent, Phone, Play, ReceiptText, Share2, Star, Trophy, User as UserIcon, Wallet, Wrench } from "lucide-react";
 import { Share } from "@capacitor/share";
+import { QUIZ_LOGO, brandName, isQuizMode } from "../lib/brand";
 import { findUser } from "../lib/engine";
 import { StoreProvider, useStore } from "../lib/store";
 import { SessionCtx, Toast, useSession } from "./ui";
@@ -20,7 +21,8 @@ const SESSION_KEY = "wg_session";
 function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
   const { state } = useStore();
   const { user: u } = useSession();
-  const quizMode = u ? !(u.betting ?? true) : state.settings.bettingDisabled;
+  const quizMode = isQuizMode(state, u);
+  const appName = brandName(state, u);
   const go = (r: Route) => { onClose(); nav.push(r); };
 
   const bettingItems: [React.ReactNode, string, () => void][] = [
@@ -41,7 +43,7 @@ function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
     [<Share2 key="i" size={19} />, "Share App", async () => {
       onClose();
       try {
-        await Share.share({ title: state.settings.appName, text: `Play on ${state.settings.appName}!`, url: location.origin });
+        await Share.share({ title: appName, text: `Play on ${appName}!`, url: location.origin });
       } catch (err) {
         if (navigator.clipboard) {
           navigator.clipboard.writeText(location.origin);
@@ -64,7 +66,7 @@ function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
     [<Share2 key="i" size={19} />, "Share App", async () => {
       onClose();
       try {
-        await Share.share({ title: state.settings.appName, text: `Play Quiz on ${state.settings.appName}!`, url: location.origin });
+        await Share.share({ title: appName, text: `Play Quiz on ${appName}!`, url: location.origin });
       } catch (err) {
         if (navigator.clipboard) {
           navigator.clipboard.writeText(location.origin);
@@ -82,7 +84,7 @@ function Drawer({ nav, onClose }: { nav: Nav; onClose: () => void }) {
       <div className="relative w-full max-w-[430px] h-full pointer-events-none">
         <aside className="slidein pointer-events-auto absolute left-0 top-0 h-full w-[78%] bg-white overflow-y-auto no-scrollbar shadow-2xl">
           <div className="px-5 pb-5 text-white" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 24px)", background: "radial-gradient(100% 80% at 50% 0%, #23489f, #0b1d4f)" }}>
-            <div className="flex justify-center mb-4"><Logo size={26} /></div>
+            <div className="flex justify-center mb-4"><Logo size={26} quiz={quizMode} /></div>
             <div className="font-bold text-lg">{u?.name}</div>
             <div className="text-sm opacity-80">
               {quizMode ? `${u?.mobile} · 🎓 Quiz Player` : `${u?.mobile} · ₹${u?.balance.toLocaleString("en-IN")}`}
@@ -211,6 +213,24 @@ function Shell() {
     }
   }, [uid, user, isCloudSynced, signIn, showToast]);
 
+  // Browser tab title + favicon follow the active brand (Shri Kalyan vs Triviaverse in Quiz mode).
+  const brandQuiz = isQuizMode(state, user);
+  const brandTitle = brandName(state, user);
+  useEffect(() => {
+    const href = brandQuiz ? QUIZ_LOGO : "/icon.png";
+    const apply = () => {
+      if (document.title !== brandTitle) document.title = brandTitle;
+      document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((l) => {
+        if (l.getAttribute("href") !== href) l.setAttribute("href", href);
+      });
+    };
+    apply();
+    // Next streams its <title>/<link> metadata in after hydration, so re-apply whenever <head> changes.
+    const obs = new MutationObserver(apply);
+    obs.observe(document.head, { childList: true, subtree: true, characterData: true });
+    return () => obs.disconnect();
+  }, [brandQuiz, brandTitle]);
+
   const handleSplashDone = useCallback(() => {
     setSplash(false);
   }, []);
@@ -222,7 +242,7 @@ function Shell() {
   if (splash) return <Splash onDone={handleSplashDone} />;
   if (!uid || !user) return <><Auth onSignedIn={(id) => { signIn(id); showToast("Login successful!"); }} toast={showToast} /><Toast msg={toast} /></>;
 
-  const quizMode = user ? !(user.betting ?? true) : state.settings.bettingDisabled;
+  const quizMode = brandQuiz;
   let screen: React.ReactNode;
   switch (route.name) {
     case "home": screen = <Home nav={nav} openMenu={() => setDrawer(true)} />; break;

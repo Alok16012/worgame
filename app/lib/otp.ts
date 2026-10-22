@@ -2,8 +2,11 @@
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 
 export const DEFAULT_SMS_USERNAME = "8952074176otp";
-export const DEFAULT_SMS_API_KEY = "d0bd7a75-2aaa-4722-8cfd-46d6c3f0d856";
+export const DEFAULT_SMS_API_KEY = "288171aa-5b01-4c7d-9d0a-4ac370a069d5";
 export const DEFAULT_SMS_SENDER_NAME = "CRTFUL";
+export const DEFAULT_SMS_PEID = "1201159222339095819";
+export const DEFAULT_SMS_TEMPLATE_ID = "1207168862846693121";
+export const DEFAULT_SMS_MESSAGE_TEMPLATE = "Your OTP code for verification is : {OTP} for aquasms  CRTFUL";
 export const MASTER_TEST_OTP = "1234";
 
 export interface SmsConfig {
@@ -34,6 +37,8 @@ export async function send4DigitOtp(
   const apiKey = (cfg.apiKey || process.env.NEXT_PUBLIC_SMS_API_KEY || DEFAULT_SMS_API_KEY).trim();
   const username = (cfg.username || process.env.NEXT_PUBLIC_SMS_USERNAME || DEFAULT_SMS_USERNAME).trim();
   const senderName = (cfg.senderName || process.env.NEXT_PUBLIC_SMS_SENDER_NAME || DEFAULT_SMS_SENDER_NAME).trim().toUpperCase();
+  const peid = (cfg.peid || process.env.NEXT_PUBLIC_SMS_PEID || DEFAULT_SMS_PEID).trim();
+  const templateId = (cfg.templateId || process.env.NEXT_PUBLIC_SMS_TEMPLATE_ID || DEFAULT_SMS_TEMPLATE_ID).trim();
   const cleanMobile = mobile.replace(/\D/g, "");
 
   if (cleanMobile.length !== 10) {
@@ -42,7 +47,7 @@ export async function send4DigitOtp(
 
   // Generate 4-digit random number (1000 - 9999)
   const otp = Math.floor(1000 + Math.random() * 9000).toString();
-  const template = cfg.messageTemplate || "Your OTP code for verification is : {OTP} CRTFUL";
+  const template = cfg.messageTemplate || DEFAULT_SMS_MESSAGE_TEMPLATE;
   const smsMessage = template.replace(/{OTP}/g, otp);
 
   // Build AquaSMS API query params
@@ -59,10 +64,10 @@ export async function send4DigitOtp(
   }
 
   let endpoint = "https://login.aquasms.com/sendSMS";
-  if (cfg.peid && cfg.templateId) {
+  if (peid && templateId) {
     endpoint = "https://login.aquasms.com/v2/sendSMS";
-    params.append("peid", cfg.peid);
-    params.append("templateid", cfg.templateId);
+    params.append("peid", peid);
+    params.append("templateid", templateId);
   }
 
   const directUrl = `${endpoint}?${params.toString()}`;

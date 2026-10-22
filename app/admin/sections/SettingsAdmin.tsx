@@ -44,9 +44,9 @@ export function MainSetting() {
   const { toast } = useAdmin();
   const [testMobile, setTestMobile] = useState("");
   const [testLoading, setTestLoading] = useState(false);
-  const { f, setF, save } = useSettingsForm(["appName", "marquee", "website", "upiId", "version", "minDeposit", "maxDeposit", "minWithdraw", "maxWithdraw", "minBid", "maxBid", "welcomeBonus", "autoUpi", "demoMode", "maintenance", "otpApiKey", "smsUsername", "smsSenderName", "smsPeid", "smsTemplateId", "smsMessageTemplate", "otpEnabled", "bettingDisabled", "quizTitle", "quizTimeLimit"]);
+  const { f, setF, save } = useSettingsForm(["appName", "marquee", "website", "upiId", "version", "minDeposit", "maxDeposit", "minWithdraw", "maxWithdraw", "minBid", "maxBid", "welcomeBonus", "autoUpi", "demoMode", "maintenance", "otpApiKey", "smsUsername", "smsSenderName", "smsPeid", "smsTemplateId", "smsMessageTemplate", "otpEnabled", "bettingDisabled", "quizTitle", "quizAppName", "quizTimeLimit"]);
   const num = (k: NumKey, label: string) => <Field label={label}><input className="admin-input" inputMode="numeric" value={f[k]} onChange={(e) => setF({ ...f, [k]: Number(e.target.value.replace(/\D/g, "")) })} /></Field>;
-  const text = (k: "appName" | "marquee" | "website" | "upiId" | "version" | "quizTitle", label: string) => <Field label={label}><input className="admin-input" value={f[k] || ""} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></Field>;
+  const text = (k: "appName" | "marquee" | "website" | "upiId" | "version" | "quizTitle" | "quizAppName", label: string) => <Field label={label}><input className="admin-input" value={f[k] || ""} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></Field>;
 
   const handleTestSms = async () => {
     if (testMobile.length !== 10) return toast("Enter valid 10-digit mobile number", "bad");
@@ -101,8 +101,8 @@ export function MainSetting() {
               <Field label="AquaSMS API Key" className="md:col-span-2">
                 <input
                   className="admin-input font-mono"
-                  placeholder="e.g. d0bd7a75-2aaa-4722-8cfd-46d6c3f0d856"
-                  value={f.otpApiKey ?? "d0bd7a75-2aaa-4722-8cfd-46d6c3f0d856"}
+                  placeholder="e.g. 288171aa-5b01-4c7d-9d0a-4ac370a069d5"
+                  value={f.otpApiKey ?? "288171aa-5b01-4c7d-9d0a-4ac370a069d5"}
                   onChange={(e) => setF({ ...f, otpApiKey: e.target.value.trim() })}
                 />
               </Field>
@@ -164,6 +164,7 @@ export function MainSetting() {
             </div>
           </div>
 
+          {text("quizAppName", "App Name (Quiz Mode) — shown instead of App Name when Quiz Mode is ON")}
           {text("quizTitle", "Quiz Title (Quiz Mode)")}
           <Field label="Quiz Time Limit (Seconds)">
             <input
