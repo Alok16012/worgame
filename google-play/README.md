@@ -31,4 +31,4 @@ Official references:
 
 ## Regenerate
 
-Run `node scripts/create-play-graphics.cjs` for logo/banner and `node scripts/create-android-branding.cjs` to regenerate the Triviaverse Android asset set in `android-branding/triviaverse/`. Switch the Android project between brands with `npm run brand:shrikalyan` / `npm run brand:triviaverse` (the quiz build scripts `build:apk:quiz` / `build:aab:quiz` do this automatically). Start `npm run dev`, install/provide Playwright, then run `node scripts/capture-play-listing.cjs`. If Playwright is installed outside this project, set `PLAYWRIGHT_MODULE` to its module path.
+Run `node scripts/create-play-graphics.cjs` for logo/banner and `node scripts/create-android-branding.cjs` to regenerate the Triviaverse Android asset set in `android-branding/triviaverse/`. The Android project ships with Triviaverse launcher branding (one bundle); `npm run brand:shrikalyan` / `npm run brand:triviaverse` swap the launcher asset set if ever needed. Start `npm run dev`, install/provide Playwright, then run `node scripts/capture-play-listing.cjs`. If Playwright is installed outside this project, set `PLAYWRIGHT_MODULE` to its module path.

@@ -1,6 +1,6 @@
 // Switch the Android launcher branding (app name, launcher icons, adaptive layers, splash screens).
-//   node scripts/android-brand.cjs shrikalyan   -> Shri Kalyan (default, betting app)
-//   node scripts/android-brand.cjs triviaverse  -> Triviaverse (quiz-mode build for Play Store)
+//   node scripts/android-brand.cjs shrikalyan   -> Shri Kalyan (old launcher branding)
+//   node scripts/android-brand.cjs triviaverse  -> Triviaverse (default; the shipped Play Store bundle)
 // Asset sets live in android-branding/<brand>/ and are copied over android/app/src/main/res.
 const fs = require('node:fs');
 const path = require('node:path');
