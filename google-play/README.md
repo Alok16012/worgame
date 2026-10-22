@@ -5,6 +5,16 @@
 - `screenshots/`: four 1080 × 1920 RGB screenshots of the actual quiz mode (Triviaverse branding): home, questions, result, guidelines. Captured in an isolated browser with a fictional local quiz account; all external/cloud traffic blocked. No production account was created or changed.
 - `banner-source.svg`: editable banner source.
 
+## App access (Play Console → App content → App access)
+
+The app needs a login. Registration sends an SMS OTP, so give reviewers this ready-made quiz-mode test account instead (it exists in the live database, status active, quiz mode, no wallet):
+
+- Mobile number: `9999999999`
+- Password: `Review@2026`
+- Steps: open the app → Login To Your Account → enter the mobile number and password → LOGIN. No OTP is asked at login.
+
+Keep the account active while the app is under review. Change the password from the admin panel (Users) if it ever leaks.
+
 ## Policy links
 
 Pages are implemented at `/privacy-policy` and `/delete-account`. Local preview:
