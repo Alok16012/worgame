@@ -14,7 +14,7 @@ Pages are implemented at `/privacy-policy` and `/delete-account`. Local preview:
 
 There is no public website/domain or deployment configuration identifying a live site in this folder. Deploy the built `out/` directory to the app's existing web host, then use its HTTPS domain followed by these paths in Play Console. Localhost links cannot be submitted as public policy URLs.
 
-The support email `support@shrikalyan.app` comes from the project's settings (not yet changed to a Triviaverse address). Its inbox/deliverability has not been verified. The deletion page opens an email request; it does not silently claim to delete data or implement an automatic deletion service.
+The policy pages use `support@triviaverse.app` (set in `app/components/LegalPage.tsx`). Its inbox/deliverability has not been verified. The deletion page opens an email request; it does not silently claim to delete data or implement an automatic deletion service.
 
 ## Before submission
 

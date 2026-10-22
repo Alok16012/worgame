@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export const supportEmail = "support@shrikalyan.app";
+export const supportEmail = "support@triviaverse.app";
 
 export function LegalPage({ title, children }: { title: string; children: React.ReactNode }) {
   return <main className="min-h-screen bg-[#0b1d4f] px-5 py-12 text-slate-100">
